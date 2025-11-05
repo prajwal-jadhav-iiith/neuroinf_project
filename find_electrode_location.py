@@ -4,8 +4,11 @@ Electrode Localization Script
 This script maps electrode coordinates from BIDS iEEG data to brain regions
 using FastSurfer/FreeSurfer segmentation files (DKT atlas).
 
+For electrodes landing on unlabeled voxels (e.g., on cortical surface),
+the script finds the nearest labeled region within a specified search radius.
+
 Usage:
-    python find_electrode_location.py --subject sub-05
+    python find_electrode_location.py --subject sub-05 --max-distance 5
 
 Output:
     CSV file with electrode names and their corresponding brain regions
@@ -17,6 +20,7 @@ import pandas as pd
 import nibabel as nib
 import numpy as np
 from pathlib import Path
+from scipy.ndimage import distance_transform_edt
 
 
 # FreeSurfer DKT Atlas Color Lookup Table
@@ -178,27 +182,91 @@ def acpc_to_voxel(acpc_coords, affine):
     return voxel_indices
 
 
-def get_region_label(voxel_idx, seg_data, img_shape):
+def find_nearest_labeled_voxel(voxel_idx, seg_data, max_distance_voxels=10):
     """
-    Get the segmentation label at a given voxel index.
+    Find the nearest labeled (non-zero) voxel to the given voxel index.
 
     Args:
         voxel_idx: (x, y, z) voxel indices
         seg_data: 3D segmentation array
-        img_shape: Shape of the segmentation volume
+        max_distance_voxels: Maximum search radius in voxels
 
     Returns:
-        Label ID at the voxel location, or None if out of bounds
+        (label_id, distance_voxels) or (None, None) if no label found
     """
     x, y, z = voxel_idx
+    img_shape = seg_data.shape
 
     # Check if voxel is within bounds
     if not (0 <= x < img_shape[0] and
             0 <= y < img_shape[1] and
             0 <= z < img_shape[2]):
-        return None
+        return None, None
 
-    return int(seg_data[x, y, z])
+    # If already labeled (non-zero), return it
+    label = seg_data[x, y, z]
+    if label != 0:
+        return int(label), 0.0
+
+    # Search in expanding sphere
+    for radius in range(1, max_distance_voxels + 1):
+        # Create a bounding box for the search region
+        x_min = max(0, x - radius)
+        x_max = min(img_shape[0], x + radius + 1)
+        y_min = max(0, y - radius)
+        y_max = min(img_shape[1], y + radius + 1)
+        z_min = max(0, z - radius)
+        z_max = min(img_shape[2], z + radius + 1)
+
+        # Get all voxels in this region
+        xx, yy, zz = np.meshgrid(
+            np.arange(x_min, x_max),
+            np.arange(y_min, y_max),
+            np.arange(z_min, z_max),
+            indexing='ij'
+        )
+
+        # Calculate distances
+        distances = np.sqrt((xx - x)**2 + (yy - y)**2 + (zz - z)**2)
+
+        # Find voxels at approximately this radius
+        mask = (distances <= radius) & (distances > radius - 1)
+
+        if not np.any(mask):
+            continue
+
+        # Get labels at these voxels
+        candidate_labels = seg_data[xx[mask], yy[mask], zz[mask]]
+        candidate_distances = distances[mask]
+
+        # Find non-zero labels
+        nonzero_mask = candidate_labels != 0
+        if np.any(nonzero_mask):
+            # Return the closest non-zero label
+            closest_idx = np.argmin(candidate_distances[nonzero_mask])
+            closest_label = candidate_labels[nonzero_mask][closest_idx]
+            closest_distance = candidate_distances[nonzero_mask][closest_idx]
+            return int(closest_label), float(closest_distance)
+
+    # No label found within max_distance
+    return None, None
+
+
+def get_region_label(voxel_idx, seg_data, img_shape, max_distance_voxels=10):
+    """
+    Get the segmentation label at a given voxel index.
+    If unlabeled (0), find the nearest labeled voxel.
+
+    Args:
+        voxel_idx: (x, y, z) voxel indices
+        seg_data: 3D segmentation array
+        img_shape: Shape of the segmentation volume
+        max_distance_voxels: Maximum search distance in voxels
+
+    Returns:
+        (label_id, distance_voxels) tuple
+    """
+    return find_nearest_labeled_voxel(voxel_idx, seg_data, max_distance_voxels)
 
 
 def label_to_region_name(label_id):
@@ -217,7 +285,7 @@ def label_to_region_name(label_id):
     return DKT_LOOKUP_TABLE.get(label_id, f"Unknown-Label-{label_id}")
 
 
-def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
+def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir=".", max_distance_mm=5.0):
     """
     Main function to localize electrodes to brain regions.
 
@@ -226,6 +294,7 @@ def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
         bids_root: Root directory of BIDS dataset
         seg_file_path: Path to the aligned segmentation file
         output_dir: Directory to save output CSV
+        max_distance_mm: Maximum search distance in mm for nearest neighbor
     """
     print("="*70)
     print(f"ELECTRODE LOCALIZATION FOR {subject_id}")
@@ -245,6 +314,7 @@ def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
     electrodes_file = electrodes_files[0]  # Use first match
     print(f"\nElectrodes file: {electrodes_file}")
     print(f"Segmentation file: {seg_file_path}")
+    print(f"Max search distance: {max_distance_mm} mm")
 
     # Load data
     print("\nLoading electrode coordinates...")
@@ -253,9 +323,17 @@ def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
 
     print("\nLoading segmentation volume...")
     seg_img = nib.load(seg_file_path)
-    seg_data = seg_img.get_fdata()
+    seg_data = seg_img.get_fdata().astype(int)
     affine = seg_img.affine
+
+    # Calculate voxel size to convert mm to voxels
+    voxel_sizes = seg_img.header.get_zooms()[:3]
+    avg_voxel_size = np.mean(voxel_sizes)
+    max_distance_voxels = int(np.ceil(max_distance_mm / avg_voxel_size))
+
     print(f"  Segmentation shape: {seg_data.shape}")
+    print(f"  Voxel size: {voxel_sizes} mm")
+    print(f"  Max search distance: {max_distance_voxels} voxels")
     print(f"  Coordinate system: ACPC (mm)")
 
     # Extract electrode coordinates
@@ -267,15 +345,31 @@ def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
 
     # Localize each electrode
     print("\nLocalizing electrodes to brain regions...")
+    print("(Using nearest-neighbor search for unlabeled voxels)")
     regions = []
     label_ids = []
+    distances_mm = []
+    method_used = []
 
     for i, (electrode_name, voxel_idx) in enumerate(zip(electrodes_df['name'], voxel_coords)):
-        label_id = get_region_label(voxel_idx, seg_data, seg_data.shape)
+        label_id, distance_voxels = get_region_label(
+            voxel_idx, seg_data, seg_data.shape, max_distance_voxels
+        )
         region_name = label_to_region_name(label_id)
 
         regions.append(region_name)
         label_ids.append(label_id if label_id is not None else -1)
+
+        if distance_voxels is not None:
+            distance_mm = distance_voxels * avg_voxel_size
+            distances_mm.append(distance_mm)
+            if distance_voxels == 0:
+                method_used.append("direct")
+            else:
+                method_used.append("nearest-neighbor")
+        else:
+            distances_mm.append(-1)
+            method_used.append("failed")
 
         if (i + 1) % 10 == 0:
             print(f"  Processed {i + 1}/{len(electrodes_df)} electrodes")
@@ -287,6 +381,8 @@ def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
         'electrode_name': electrodes_df['name'],
         'region': regions,
         'label_id': label_ids,
+        'distance_mm': distances_mm,
+        'method': method_used,
         'x_mm': electrodes_df['x'],
         'y_mm': electrodes_df['y'],
         'z_mm': electrodes_df['z'],
@@ -310,13 +406,31 @@ def localize_electrodes(subject_id, bids_root, seg_file_path, output_dir="."):
     print(f"  1. {output_file}")
     print(f"     (electrode_name, region)")
     print(f"  2. {detailed_file}")
-    print(f"     (includes coordinates, voxel indices, and label IDs)")
+    print(f"     (includes coordinates, distances, and method used)")
 
     # Print summary statistics
     print(f"\nSummary:")
     unique_regions = output_df['region'].value_counts()
     print(f"  Total electrodes: {len(output_df)}")
     print(f"  Unique regions: {len(unique_regions)}")
+
+    # Method statistics
+    direct_count = (output_df['method'] == 'direct').sum()
+    nn_count = (output_df['method'] == 'nearest-neighbor').sum()
+    failed_count = (output_df['method'] == 'failed').sum()
+
+    print(f"\nLocalization method:")
+    print(f"  Direct hit: {direct_count} electrodes")
+    print(f"  Nearest-neighbor: {nn_count} electrodes")
+    print(f"  Failed: {failed_count} electrodes")
+
+    if nn_count > 0:
+        nn_distances = output_df[output_df['method'] == 'nearest-neighbor']['distance_mm']
+        print(f"\nNearest-neighbor distances:")
+        print(f"  Mean: {nn_distances.mean():.2f} mm")
+        print(f"  Median: {nn_distances.median():.2f} mm")
+        print(f"  Max: {nn_distances.max():.2f} mm")
+
     print(f"\nTop 10 regions by electrode count:")
     for region, count in unique_regions.head(10).items():
         print(f"    {region}: {count}")
@@ -356,6 +470,12 @@ def main():
         default=".",
         help="Directory to save output CSV files"
     )
+    parser.add_argument(
+        "--max-distance",
+        type=float,
+        default=5.0,
+        help="Maximum search distance in mm for nearest-neighbor (default: 5.0)"
+    )
 
     args = parser.parse_args()
 
@@ -364,7 +484,8 @@ def main():
         subject_id=args.subject,
         bids_root=args.bids_root,
         seg_file_path=args.seg_file,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        max_distance_mm=args.max_distance
     )
 
 
