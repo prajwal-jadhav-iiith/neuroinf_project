@@ -461,8 +461,14 @@ def main():
     parser.add_argument(
         "--seg-file",
         type=str,
-        default="./aparc.DKTatlas+aseg.deep_original_space.nii.gz",
-        help="Path to aligned segmentation file"
+        default=None,
+        help="Path to aligned segmentation file (overrides --freesurfer-dir if provided)"
+    )
+    parser.add_argument(
+        "--freesurfer-dir",
+        type=str,
+        default="./Freesurfer",
+        help="Root directory containing FreeSurfer outputs organized by subject (default: ./Freesurfer)"
     )
     parser.add_argument(
         "--output-dir",
@@ -479,11 +485,25 @@ def main():
 
     args = parser.parse_args()
 
+    # Determine segmentation file path
+    if args.seg_file:
+        seg_file_path = args.seg_file
+    else:
+        # Construct path from FreeSurfer directory structure
+        freesurfer_subject_dir = Path(args.freesurfer_dir) / args.subject
+        seg_file_path = freesurfer_subject_dir / "aparc.DKTatlas+aseg.deep_original_space.nii.gz"
+
+        if not seg_file_path.exists():
+            raise FileNotFoundError(
+                f"Could not find resampled segmentation file: {seg_file_path}\n"
+                f"Please run resample_segmentation.py first for {args.subject}"
+            )
+
     # Run localization
     localize_electrodes(
         subject_id=args.subject,
         bids_root=args.bids_root,
-        seg_file_path=args.seg_file,
+        seg_file_path=str(seg_file_path),
         output_dir=args.output_dir,
         max_distance_mm=args.max_distance
     )
