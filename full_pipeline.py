@@ -178,7 +178,33 @@ def detect_emg_artifacts(ica, ica_sources, raw_all_filt, emg_channels, threshold
     return emg_indices
 
 
-def get_channels_by_type(raw, channels_df, channel_types, subject_id, perisylvian_data):
+def load_perisylvian_electrodes_from_csv(subject_id, electrode_results_dir='./electrode_results'):
+    """
+    Load perisylvian electrode information from CSV file
+
+    Parameters:
+    -----------
+    subject_id : str
+        Subject identifier (e.g., 'sub-05')
+    electrode_results_dir : str
+        Directory containing electrode CSV files
+
+    Returns:
+    --------
+    perisylvian_df : pd.DataFrame or None
+        DataFrame with columns: electrode_name, region
+        Returns None if file doesn't exist
+    """
+    csv_path = Path(electrode_results_dir) / f"{subject_id}_perisylvian_electrodes.csv"
+
+    if csv_path.exists():
+        return pd.read_csv(csv_path)
+    else:
+        print(f"  WARNING: Perisylvian CSV not found at {csv_path}")
+        return None
+
+
+def get_channels_by_type(raw, channels_df, channel_types, subject_id, perisylvian_df=None):
     """
     Get channels of specific types that are marked as 'good'
 
@@ -192,25 +218,35 @@ def get_channels_by_type(raw, channels_df, channel_types, subject_id, perisylvia
         List of channel types to extract (e.g., ['SEEG', 'ECOG'])
     subject_id : str
         Subject identifier
-    perisylvian_data : dict
-        Dictionary containing perisylvian channel information
+    perisylvian_df : pd.DataFrame or None
+        DataFrame with perisylvian electrode information (electrode_name, region)
+        If None, uses all good channels of specified type
 
     Returns:
     --------
     channels : list of str
         List of channel names
     """
-    current_subject_perisylvian = perisylvian_data.get(subject_id, {})
-
-    if current_subject_perisylvian:
-        current_subject_perisylvian = set(current_subject_perisylvian.keys())
+    # Get perisylvian electrode names if available
+    if perisylvian_df is not None and len(perisylvian_df) > 0:
+        perisylvian_electrodes = set(perisylvian_df['electrode_name'].tolist())
+    else:
+        perisylvian_electrodes = None
 
     if "SEEG" in channel_types or "ECOG" in channel_types:
-        good_channels = channels_df[
-            (channels_df['status'] == 'good') &
-            (channels_df['type'].isin(channel_types)) &
-            (channels_df['name'].isin(current_subject_perisylvian))
-        ]['name'].tolist()
+        if perisylvian_electrodes is not None:
+            # Filter for perisylvian electrodes only
+            good_channels = channels_df[
+                (channels_df['status'] == 'good') &
+                (channels_df['type'].isin(channel_types)) &
+                (channels_df['name'].isin(perisylvian_electrodes))
+            ]['name'].tolist()
+        else:
+            # Use all good channels of specified type
+            good_channels = channels_df[
+                (channels_df['status'] == 'good') &
+                (channels_df['type'].isin(channel_types))
+            ]['name'].tolist()
     else:
         good_channels = channels_df[
             (channels_df['status'] == 'good') &
@@ -470,25 +506,40 @@ def epoch_ieeg_data(raw, events, event_id, tmin=0.0, tmax=30.0):
 # STATISTICAL ANALYSIS FUNCTIONS
 # =============================================================================
 
-def downsample_time_dimension(power_data, target_time_points=100):
+def downsample_time_dimension(power_data, decim_factor=None, target_time_points=None):
     """
     Downsample the temporal dimension by averaging in bins
 
     Parameters:
     -----------
     power_data : np.ndarray (n_epochs, n_channels, n_freqs, n_times)
-    target_time_points : int
-        Target number of time points (default: 100)
+    decim_factor : int or None
+        Decimation factor (e.g., 4 means reduce sampling by 4x)
+        If provided, takes precedence over target_time_points
+    target_time_points : int or None
+        Target number of time points (e.g., 100)
+        Only used if decim_factor is None
 
     Returns:
     --------
-    downsampled : np.ndarray (n_epochs, n_channels, n_freqs, target_time_points)
+    downsampled : np.ndarray
+        Downsampled array
     """
     n_epochs, n_channels, n_freqs, n_times = power_data.shape
 
-    # Calculate bin size
-    bin_size = n_times // target_time_points
-    actual_time_points = n_times // bin_size
+    if decim_factor is not None:
+        # Use decimation factor
+        bin_size = decim_factor
+        actual_time_points = n_times // decim_factor
+        print(f"  Decimating by factor {decim_factor}: {n_times} -> {actual_time_points} timepoints")
+    elif target_time_points is not None:
+        # Use target time points (old behavior)
+        bin_size = n_times // target_time_points
+        actual_time_points = n_times // bin_size
+        print(f"  Downsampling to {actual_time_points} timepoints")
+    else:
+        # No downsampling
+        return power_data
 
     # Reshape and average
     downsampled = np.zeros((n_epochs, n_channels, n_freqs, actual_time_points))
@@ -562,7 +613,7 @@ def calculate_cluster_statistics(clusters, t_map_abs, statistic_type='mass'):
 def permutation_test_cluster_based(speech_power, music_power,
                                     n_permutations=5000, precluster_p=0.05,
                                     tail='two', cluster_statistic='mass',
-                                    downsample_time=True, target_time_points=100):
+                                    decim_factor=None, target_time_points=None):
     """
     OPTIMIZED cluster-based permutation test
 
@@ -574,8 +625,11 @@ def permutation_test_cluster_based(speech_power, music_power,
     precluster_p : float
     tail : str
     cluster_statistic : str ('size' or 'mass')
-    downsample_time : bool
-    target_time_points : int
+    decim_factor : int or None
+        Temporal decimation factor (e.g., 4 = reduce time points by 4x)
+        If provided, takes precedence over target_time_points
+    target_time_points : int or None
+        Target number of time points (only used if decim_factor is None)
 
     Returns:
     --------
@@ -586,10 +640,14 @@ def permutation_test_cluster_based(speech_power, music_power,
     print("="*70)
 
     # Downsample temporal dimension if requested
-    if downsample_time:
+    if decim_factor is not None or target_time_points is not None:
         print("\nDownsampling temporal dimension...")
-        speech_power = downsample_time_dimension(speech_power, target_time_points)
-        music_power = downsample_time_dimension(music_power, target_time_points)
+        speech_power = downsample_time_dimension(speech_power,
+                                                 decim_factor=decim_factor,
+                                                 target_time_points=target_time_points)
+        music_power = downsample_time_dimension(music_power,
+                                                decim_factor=decim_factor,
+                                                target_time_points=target_time_points)
 
     n_channels = speech_power.shape[1]
     n_freqs = speech_power.shape[2]
@@ -1086,7 +1144,8 @@ def verify_two_tailed_test(results):
 # MAIN PIPELINE FUNCTION
 # =============================================================================
 
-def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir='./results_theta'):
+def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrode_results',
+                         output_base_dir='./results_theta', save_preprocessed=True):
     """
     Run the complete analysis pipeline for a single subject
 
@@ -1096,10 +1155,12 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         Subject identifier (e.g., 'sub-05')
     data_dir : str
         Path to the data directory
-    perisylvian_data : dict
-        Dictionary containing perisylvian channel information
+    electrode_results_dir : str
+        Directory containing electrode localization CSV files
     output_base_dir : str
         Base directory for output files
+    save_preprocessed : bool
+        Whether to save preprocessed theta power data for group analysis
 
     Returns:
     --------
@@ -1115,19 +1176,29 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         subject_output_dir = os.path.join(output_base_dir, subject_id)
         os.makedirs(subject_output_dir, exist_ok=True)
 
+        # 0. Load perisylvian electrode information from CSV
+        print(f"\n[0/15] Loading perisylvian electrode information...")
+        perisylvian_df = load_perisylvian_electrodes_from_csv(subject_id, electrode_results_dir)
+        if perisylvian_df is not None:
+            print(f"  Loaded {len(perisylvian_df)} perisylvian electrodes")
+            print(f"  Unique ROIs: {perisylvian_df['region'].nunique()}")
+        else:
+            print(f"  WARNING: No perisylvian electrodes found for {subject_id}")
+            print(f"  Will process all good iEEG channels instead")
+
         # 1. Load data
-        print(f"\n[1/10] Loading data for {subject_id}...")
+        print(f"\n[1/15] Loading data for {subject_id}...")
         raw, events_df, channels_df = load_ieeg_data(subject_id, data_dir)
         print(f"  Raw data shape: {raw._data.shape}")
         print(f"  Sampling frequency: {raw.info['sfreq']} Hz")
         print(f"  Recording duration: {raw.times[-1]:.2f} seconds")
 
         # 2. Get channels
-        print(f"\n[2/10] Selecting channels...")
-        ieeg_channels = get_channels_by_type(raw, channels_df, ['SEEG', 'ECOG'], subject_id, perisylvian_data)
-        eog_channels = get_channels_by_type(raw, channels_df, ['EOG'], subject_id, perisylvian_data)
-        ecg_channels = get_channels_by_type(raw, channels_df, ['ECG'], subject_id, perisylvian_data)
-        emg_channels = get_channels_by_type(raw, channels_df, ['EMG'], subject_id, perisylvian_data)
+        print(f"\n[2/15] Selecting channels...")
+        ieeg_channels = get_channels_by_type(raw, channels_df, ['SEEG', 'ECOG'], subject_id, perisylvian_df)
+        eog_channels = get_channels_by_type(raw, channels_df, ['EOG'], subject_id, None)
+        ecg_channels = get_channels_by_type(raw, channels_df, ['ECG'], subject_id, None)
+        emg_channels = get_channels_by_type(raw, channels_df, ['EMG'], subject_id, None)
 
         print(f"  iEEG channels: {len(ieeg_channels)}")
         print(f"  EOG channels: {len(eog_channels)}")
@@ -1139,7 +1210,7 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
             return False
 
         # 3. Prepare raw objects
-        print(f"\n[3/10] Preparing raw data objects...")
+        print(f"\n[3/15] Preparing raw data objects...")
         # Raw object with ONLY iEEG channels (for ICA fitting)
         raw_ieeg = raw.copy().pick_channels(ieeg_channels)
 
@@ -1150,14 +1221,14 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         print(f"  raw_all channels: {len(raw_all.ch_names)}")
 
         # 4. High-pass filter for ICA
-        print(f"\n[4/10] Applying high-pass filter (1 Hz) for ICA...")
+        print(f"\n[4/15] Applying high-pass filter (1 Hz) for ICA...")
         # Filter BOTH raw objects with the same parameters
         raw_ieeg_filt = raw_ieeg.copy().filter(l_freq=1.0, h_freq=None, fir_design='firwin', verbose=False)
         raw_all_filt = raw_all.copy().filter(l_freq=1.0, h_freq=None, fir_design='firwin', verbose=False)
         print("  High-pass filter applied to both datasets")
 
         # 5. ICA artifact removal
-        print(f"\n[5/10] Fitting ICA on iEEG channels...")
+        print(f"\n[5/15] Fitting ICA on iEEG channels...")
         ica = mne.preprocessing.ICA(
             n_components=0.99,
             method='fastica',
@@ -1173,7 +1244,7 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         ica_sources = ica.get_sources(raw_ieeg_filt)
 
         # Detect artifacts using correlation with EOG/ECG/EMG channels
-        print(f"\n[6/10] Detecting artifacts...")
+        print(f"\n[6/15] Detecting artifacts...")
         eog_indices = detect_eog_artifacts(ica, ica_sources, raw_all_filt, eog_channels)
         ecg_indices = detect_ecg_artifacts(ica, ica_sources, raw_all_filt, ecg_channels)
         emg_indices = detect_emg_artifacts(ica, ica_sources, raw_all_filt, emg_channels)
@@ -1192,22 +1263,22 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         print(f"  Components removed: {len(all_artifact_indices)} out of {ica.n_components_}")
 
         # 7. Notch filter
-        print(f"\n[7/10] Applying notch filter...")
+        print(f"\n[7/15] Applying notch filter...")
         raw_notched = notch_filter(raw_ieeg_clean)
 
         # 8. Bandpass filter
-        print(f"\n[8/10] Applying bandpass filter...")
+        print(f"\n[8/15] Applying bandpass filter...")
         raw_bandpass = bandpass_filter(raw_notched)
 
         # 9. Common Average Reference
-        print(f"\n[9/10] Applying common average reference...")
+        print(f"\n[9/15] Applying common average reference...")
         raw_referenced = reference(raw_bandpass)
 
         # Note: Theta band extraction with Hilbert transform is commented out per user's modification
         # hilbert_data = extract_hfb_power(raw_referenced)
 
         # 10. Create epochs
-        print(f"\n[10/10] Creating epochs...")
+        print(f"\n[10/15] Creating epochs...")
         events, event_id = create_mne_events(events_df, raw_referenced)
         print(f"  MNE events created: {len(events)} events")
 
@@ -1219,7 +1290,7 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         print(f"  Music epochs: {len(epochs['music'])}")
 
         # 11. Time-frequency analysis
-        print(f"\n[11/11] Computing time-frequency representation...")
+        print(f"\n[11/15] Computing time-frequency representation...")
         freqs = np.arange(4, 8.5, 0.5)
         n_cycles = freqs / 2
 
@@ -1235,8 +1306,78 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
         print(f"  Speech power shape: {power_speech.data.shape}")
         print(f"  Music power shape: {power_music.data.shape}")
 
-        # 12. Statistical testing
-        print(f"\n[12/12] Running cluster-based permutation test...")
+        # 12. Save preprocessed theta power data for group analysis
+        if save_preprocessed:
+            print(f"\n[12/15] Saving preprocessed theta power data...")
+            preprocessed_dir = os.path.join(output_base_dir, 'preprocessed_data')
+            os.makedirs(preprocessed_dir, exist_ok=True)
+
+            # Average theta power across trials for each condition
+            speech_theta_avg = power_speech.data.mean(axis=0)  # Average across trials: (n_channels, n_freqs, n_times)
+            music_theta_avg = power_music.data.mean(axis=0)
+
+            # Average across frequency band (theta = 4-8 Hz)
+            speech_theta_power = speech_theta_avg.mean(axis=1)  # (n_channels, n_times)
+            music_theta_power = music_theta_avg.mean(axis=1)
+
+            # CRITICAL: Resample to common time grid for group analysis consistency
+            # Define standard time grid: 0-30s at 32 Hz (961 timepoints)
+            # This ensures all subjects have identical temporal resolution
+            common_sfreq = 32.0  # Hz
+            common_times = np.linspace(0, 30, int(30 * common_sfreq) + 1)
+
+            current_times = power_speech.times
+            current_sfreq = 1 / (current_times[1] - current_times[0])
+
+            if not np.allclose(current_times, common_times, atol=0.01):
+                print(f"  Resampling from {current_sfreq:.1f} Hz ({len(current_times)} pts) to {common_sfreq:.1f} Hz ({len(common_times)} pts)")
+                from scipy.interpolate import interp1d
+
+                # Resample each channel independently
+                speech_resampled = np.zeros((speech_theta_power.shape[0], len(common_times)))
+                music_resampled = np.zeros((music_theta_power.shape[0], len(common_times)))
+
+                for ch_idx in range(speech_theta_power.shape[0]):
+                    # Linear interpolation for each channel
+                    f_speech = interp1d(current_times, speech_theta_power[ch_idx, :],
+                                       kind='linear', fill_value='extrapolate')
+                    f_music = interp1d(current_times, music_theta_power[ch_idx, :],
+                                      kind='linear', fill_value='extrapolate')
+
+                    speech_resampled[ch_idx, :] = f_speech(common_times)
+                    music_resampled[ch_idx, :] = f_music(common_times)
+
+                speech_theta_power = speech_resampled
+                music_theta_power = music_resampled
+                save_times = common_times
+            else:
+                print(f"  Already at target sampling rate ({current_sfreq:.1f} Hz)")
+                save_times = current_times
+
+            # Save as .npz file with metadata
+            save_path = os.path.join(preprocessed_dir, f'{subject_id}_theta_power.npz')
+            np.savez(
+                save_path,
+                speech_theta_power=speech_theta_power,
+                music_theta_power=music_theta_power,
+                channel_names=np.array(ieeg_channels),
+                times=save_times,
+                freqs=power_speech.freqs,
+                subject_id=subject_id
+            )
+            print(f"  Saved to: {save_path}")
+            print(f"  Final shape: {speech_theta_power.shape} (channels × timepoints)")
+
+            # Also save ROI mapping if available
+            if perisylvian_df is not None:
+                roi_mapping_path = os.path.join(preprocessed_dir, f'{subject_id}_roi_mapping.csv')
+                # Filter to only include channels that were analyzed
+                analyzed_df = perisylvian_df[perisylvian_df['electrode_name'].isin(ieeg_channels)]
+                analyzed_df.to_csv(roi_mapping_path, index=False)
+                print(f"  ROI mapping saved to: {roi_mapping_path}")
+
+        # 13. Statistical testing
+        print(f"\n[13/15] Running cluster-based permutation test...")
         cluster_results = permutation_test_cluster_based(
             power_speech.data,
             power_music.data,
@@ -1244,38 +1385,42 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
             precluster_p=0.05,
             tail='two',
             cluster_statistic='mass',
-            downsample_time=False
+            decim_factor=4  # Decimate by 4x for faster computation
         )
 
         # Verify two-tailed test is working correctly
         verify_two_tailed_test(cluster_results)
 
-        # 13. Generate visualizations
-        print(f"\n[13/13] Generating visualizations...")
+        # 14. Generate visualizations
+        print(f"\n[14/15] Generating visualizations...")
+        # Decimate times array to match the decimated data (decim_factor=4)
+        decim_factor = 4
+        n_decimated_times = len(power_speech.times) // decim_factor
+        decimated_times = power_speech.times[:n_decimated_times * decim_factor:decim_factor]
+
         plot_tf_results(
             cluster_results,
             channel_names=ieeg_channels,
             freqs=power_speech.freqs,
-            times=power_speech.times,
+            times=decimated_times,
             subject_id=subject_id,
             save_dir=subject_output_dir,
             show_plots=False
         )
 
-        # 14. Generate report
-        print(f"\n[14/14] Generating text report...")
+        # 15. Generate report and summary
+        print(f"\n[15/15] Generating report and summary...")
         report_path = os.path.join(subject_output_dir, f'{subject_id}_cluster_report.txt')
         generate_cluster_report(
             cluster_results,
             channel_names=ieeg_channels,
             freqs=power_speech.freqs,
-            times=power_speech.times,
+            times=decimated_times,
             subject_id=subject_id,
             save_path=report_path
         )
 
-        # 15. Create summary table
-        print(f"\n[15/15] Creating summary table...")
+        # Create summary table
         summary_df = create_summary_table(cluster_results, ieeg_channels)
 
         if len(summary_df) > 0:
@@ -1311,20 +1456,38 @@ def run_subject_pipeline(subject_id, data_dir, perisylvian_data, output_base_dir
 if __name__ == "__main__":
     # Configuration
     DATA_DIR = r"C:\DS003688\DS003688"
-    PERISYLVIAN_JSON = "./perisylvian_data.json"
+    ELECTRODE_RESULTS_DIR = "./electrode_results"
     OUTPUT_DIR = "./results_theta"
 
-    # Load perisylvian channel data
-    print("Loading perisylvian channel data...")
-    with open(PERISYLVIAN_JSON, 'r') as f:
-        perisylvian_data = json.load(f)
+    # Discover subjects from electrode_results directory
+    print("Discovering subjects from electrode localization results...")
+    electrode_results_path = Path(ELECTRODE_RESULTS_DIR)
 
-    # Get all subjects from JSON
-    all_subjects = list(perisylvian_data.keys())
-    print(f"\nFound {len(all_subjects)} subjects in {PERISYLVIAN_JSON}:")
+    # Find all perisylvian electrode CSV files
+    perisylvian_files = list(electrode_results_path.glob("*_perisylvian_electrodes.csv"))
+
+    if len(perisylvian_files) == 0:
+        print(f"\nERROR: No perisylvian electrode CSV files found in {ELECTRODE_RESULTS_DIR}")
+        print("Please run the electrode localization pipeline first (Stages 0-2)")
+        print("  1. resample_segmentation.py")
+        print("  2. find_electrode_location.py")
+        print("  3. filter_perisylvian_electrodes.py")
+        exit(1)
+
+    # Extract subject IDs from filenames
+    all_subjects = []
+    for csv_file in perisylvian_files:
+        # Extract subject ID from filename (e.g., "sub-05_perisylvian_electrodes.csv" -> "sub-05")
+        subject_id = csv_file.stem.replace('_perisylvian_electrodes', '')
+        all_subjects.append(subject_id)
+
+    all_subjects = sorted(all_subjects)
+
+    print(f"\nFound {len(all_subjects)} subjects with perisylvian electrode data:")
     for subj in all_subjects:
-        n_channels = len(perisylvian_data[subj])
-        print(f"  {subj}: {n_channels} channels")
+        csv_path = electrode_results_path / f"{subj}_perisylvian_electrodes.csv"
+        df = pd.read_csv(csv_path)
+        print(f"  {subj}: {len(df)} perisylvian electrodes, {df['region'].nunique()} unique ROIs")
 
     # Track results
     successful_subjects = []
@@ -1343,8 +1506,9 @@ if __name__ == "__main__":
         success = run_subject_pipeline(
             subject_id=subject_id,
             data_dir=DATA_DIR,
-            perisylvian_data=perisylvian_data,
-            output_base_dir=OUTPUT_DIR
+            electrode_results_dir=ELECTRODE_RESULTS_DIR,
+            output_base_dir=OUTPUT_DIR,
+            save_preprocessed=True
         )
 
         if success:
