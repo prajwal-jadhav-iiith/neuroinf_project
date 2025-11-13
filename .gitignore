@@ -3,7 +3,6 @@ Freesurfer
 *.mgz
 *.gz
 nul
-*.csv
 .c*
 *.md
 results_theta/*
