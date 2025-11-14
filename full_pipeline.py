@@ -810,6 +810,216 @@ def permutation_test_cluster_based(speech_power, music_power,
 # VISUALIZATION AND REPORTING FUNCTIONS
 # =============================================================================
 
+def plot_ica_comparison(raw_before, raw_after, ica, channel_names, subject_id,
+                        save_dir='./ica_comparison', duration=10.0, n_channels=6):
+    """
+    Create before/after ICA comparison visualizations
+
+    Parameters:
+    -----------
+    raw_before : mne.io.Raw
+        Raw data before ICA cleaning
+    raw_after : mne.io.Raw
+        Raw data after ICA cleaning
+    ica : mne.preprocessing.ICA
+        Fitted ICA object
+    channel_names : list
+        List of channel names to plot
+    subject_id : str
+        Subject identifier
+    save_dir : str
+        Directory to save comparison plots
+    duration : float
+        Duration of data segment to plot (seconds)
+    n_channels : int
+        Number of channels to display in time series plot
+    """
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Select subset of channels for plotting (evenly spaced)
+    n_total_channels = len(channel_names)
+    if n_total_channels > n_channels:
+        step = n_total_channels // n_channels
+        plot_channels = channel_names[::step][:n_channels]
+    else:
+        plot_channels = channel_names
+
+    print(f"\n  Creating ICA comparison visualizations...")
+    print(f"    Plotting {len(plot_channels)} representative channels")
+
+    # =========================================================================
+    # Figure 1: Time Series Comparison
+    # =========================================================================
+    fig, axes = plt.subplots(len(plot_channels), 2, figsize=(16, 2*len(plot_channels)))
+    if len(plot_channels) == 1:
+        axes = axes.reshape(1, -1)
+
+    fig.suptitle(f'{subject_id} - ICA Artifact Removal Comparison\n'
+                 f'Before (left) vs After (right) | {len(ica.exclude)} components removed',
+                 fontsize=14, fontweight='bold', y=0.995)
+
+    # Get data segment
+    start_sample = int(raw_before.info['sfreq'] * 5)  # Start at 5 seconds
+    n_samples = int(raw_before.info['sfreq'] * duration)
+    times = np.arange(n_samples) / raw_before.info['sfreq']
+
+    for idx, ch_name in enumerate(plot_channels):
+        # Before ICA
+        ax_before = axes[idx, 0]
+        data_before = raw_before.copy().pick([ch_name]).get_data()[0, start_sample:start_sample+n_samples]
+        ax_before.plot(times, data_before * 1e6, 'k-', linewidth=0.5)  # Convert to µV
+        ax_before.set_ylabel(f'{ch_name}\n(µV)', fontsize=9)
+        ax_before.grid(True, alpha=0.3)
+        if idx == 0:
+            ax_before.set_title('Before ICA', fontsize=12, fontweight='bold')
+        if idx == len(plot_channels) - 1:
+            ax_before.set_xlabel('Time (s)', fontsize=10)
+        else:
+            ax_before.set_xticklabels([])
+
+        # After ICA
+        ax_after = axes[idx, 1]
+        data_after = raw_after.copy().pick([ch_name]).get_data()[0, start_sample:start_sample+n_samples]
+        ax_after.plot(times, data_after * 1e6, 'b-', linewidth=0.5)  # Convert to µV
+        ax_after.grid(True, alpha=0.3)
+        if idx == 0:
+            ax_after.set_title('After ICA', fontsize=12, fontweight='bold')
+        if idx == len(plot_channels) - 1:
+            ax_after.set_xlabel('Time (s)', fontsize=10)
+        else:
+            ax_after.set_xticklabels([])
+        ax_after.set_yticklabels([])
+
+        # Match y-limits for comparison
+        y_min = min(ax_before.get_ylim()[0], ax_after.get_ylim()[0])
+        y_max = max(ax_before.get_ylim()[1], ax_after.get_ylim()[1])
+        ax_before.set_ylim(y_min, y_max)
+        ax_after.set_ylim(y_min, y_max)
+
+    plt.tight_layout()
+    timeseries_path = os.path.join(save_dir, f'{subject_id}_ica_timeseries_comparison.png')
+    plt.savefig(timeseries_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {timeseries_path}")
+    plt.close()
+
+    # =========================================================================
+    # Figure 2: Power Spectral Density Comparison
+    # =========================================================================
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    fig.suptitle(f'{subject_id} - Power Spectral Density Before/After ICA',
+                 fontsize=14, fontweight='bold')
+
+    # Compute PSD for all channels
+    print(f"    Computing power spectral density...")
+    # Use the Raw object's compute_psd method (modern MNE API)
+    psd_obj_before = raw_before.compute_psd(method='welch', fmin=0.5, fmax=100,
+                                             n_fft=2048, verbose=False)
+    psd_before = psd_obj_before.get_data()
+    freqs_psd = psd_obj_before.freqs
+
+    psd_obj_after = raw_after.compute_psd(method='welch', fmin=0.5, fmax=100,
+                                           n_fft=2048, verbose=False)
+    psd_after = psd_obj_after.get_data()
+
+    # Average across channels
+    psd_before_avg = psd_before.mean(axis=0)
+    psd_after_avg = psd_after.mean(axis=0)
+
+    # Plot 1: Before ICA (average across channels)
+    ax = axes[0, 0]
+    ax.semilogy(freqs_psd, psd_before_avg, 'k-', linewidth=1.5, label='Before ICA')
+    ax.set_xlabel('Frequency (Hz)', fontsize=11)
+    ax.set_ylabel('Power (V²/Hz)', fontsize=11)
+    ax.set_title('Before ICA - Average PSD', fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0.5, 100)
+
+    # Plot 2: After ICA (average across channels)
+    ax = axes[0, 1]
+    ax.semilogy(freqs_psd, psd_after_avg, 'b-', linewidth=1.5, label='After ICA')
+    ax.set_xlabel('Frequency (Hz)', fontsize=11)
+    ax.set_ylabel('Power (V²/Hz)', fontsize=11)
+    ax.set_title('After ICA - Average PSD', fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0.5, 100)
+
+    # Plot 3: Overlay comparison
+    ax = axes[1, 0]
+    ax.semilogy(freqs_psd, psd_before_avg, 'k-', linewidth=1.5, label='Before ICA', alpha=0.7)
+    ax.semilogy(freqs_psd, psd_after_avg, 'b-', linewidth=1.5, label='After ICA', alpha=0.7)
+    ax.set_xlabel('Frequency (Hz)', fontsize=11)
+    ax.set_ylabel('Power (V²/Hz)', fontsize=11)
+    ax.set_title('Overlay Comparison', fontsize=12, fontweight='bold')
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0.5, 100)
+
+    # Plot 4: Difference (reduction in power)
+    ax = axes[1, 1]
+    power_reduction = (psd_before_avg - psd_after_avg) / psd_before_avg * 100  # Percent reduction
+    ax.plot(freqs_psd, power_reduction, 'r-', linewidth=1.5)
+    ax.axhline(y=0, color='k', linestyle='--', linewidth=1, alpha=0.5)
+    ax.set_xlabel('Frequency (Hz)', fontsize=11)
+    ax.set_ylabel('Power Reduction (%)', fontsize=11)
+    ax.set_title('Power Reduction by ICA', fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0.5, 100)
+
+    # Highlight artifact-related frequencies
+    # EOG: 0-5 Hz, ECG: 1-2 Hz (fundamental), EMG: >20 Hz
+    ax.axvspan(0.5, 5, alpha=0.1, color='orange', label='EOG range')
+    ax.axvspan(20, 100, alpha=0.1, color='red', label='EMG range')
+    ax.legend(fontsize=9)
+
+    plt.tight_layout()
+    psd_path = os.path.join(save_dir, f'{subject_id}_ica_psd_comparison.png')
+    plt.savefig(psd_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {psd_path}")
+    plt.close()
+
+    # =========================================================================
+    # Figure 3: ICA Components Removed
+    # =========================================================================
+    if len(ica.exclude) > 0:
+        n_excluded = len(ica.exclude)
+        n_cols = min(4, n_excluded)
+        n_rows = int(np.ceil(n_excluded / n_cols))
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, 3*n_rows))
+        if n_excluded == 1:
+            axes = np.array([axes])
+        axes = axes.flatten()
+
+        fig.suptitle(f'{subject_id} - ICA Components Removed ({n_excluded} components)',
+                     fontsize=14, fontweight='bold')
+
+        sources = ica.get_sources(raw_before)
+        sources_data = sources.get_data()
+        times_comp = np.arange(min(10000, sources_data.shape[1])) / raw_before.info['sfreq']
+
+        for idx, comp_idx in enumerate(ica.exclude):
+            ax = axes[idx]
+            comp_data = sources_data[comp_idx, :len(times_comp)]
+            ax.plot(times_comp, comp_data, 'k-', linewidth=0.5)
+            ax.set_title(f'Component {comp_idx}', fontsize=10, fontweight='bold')
+            ax.set_xlabel('Time (s)', fontsize=9)
+            ax.set_ylabel('Amplitude (AU)', fontsize=9)
+            ax.grid(True, alpha=0.3)
+
+        # Hide unused subplots
+        for idx in range(n_excluded, len(axes)):
+            axes[idx].axis('off')
+
+        plt.tight_layout()
+        components_path = os.path.join(save_dir, f'{subject_id}_ica_removed_components.png')
+        plt.savefig(components_path, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {components_path}")
+        plt.close()
+
+    print(f"  ✓ ICA comparison visualizations complete!")
+
+
 def plot_tf_results(results, channel_names, freqs, times, subject_id,
                     save_dir='.', show_plots=False):
     """
@@ -1212,23 +1422,28 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
         # 3. Prepare raw objects
         print(f"\n[3/15] Preparing raw data objects...")
         # Raw object with ONLY iEEG channels (for ICA fitting)
-        raw_ieeg = raw.copy().pick_channels(ieeg_channels)
+        raw_ieeg = raw.copy().pick(ieeg_channels)
 
         # Raw object with ALL good channels (for artifact detection)
         all_channels = ieeg_channels + eog_channels + ecg_channels + emg_channels
-        raw_all = raw.copy().pick_channels(all_channels)
+        raw_all = raw.copy().pick(all_channels)
         print(f"  raw_ieeg channels: {len(raw_ieeg.ch_names)}")
         print(f"  raw_all channels: {len(raw_all.ch_names)}")
 
-        # 4. High-pass filter for ICA
-        print(f"\n[4/15] Applying high-pass filter (1 Hz) for ICA...")
-        # Filter BOTH raw objects with the same parameters
-        raw_ieeg_filt = raw_ieeg.copy().filter(l_freq=1.0, h_freq=None, fir_design='firwin', verbose=False)
-        raw_all_filt = raw_all.copy().filter(l_freq=1.0, h_freq=None, fir_design='firwin', verbose=False)
-        print("  High-pass filter applied to both datasets")
+        # 4. High-pass filter for ICA fitting only
+        print(f"\n[4/15] Preparing data for ICA...")
+        # Create a high-pass filtered copy (1 Hz) for ICA fitting
+        # Higher cutoff improves stationarity and ICA performance
+        raw_ieeg_for_ica = raw_ieeg.copy().filter(l_freq=1.0, h_freq=None, fir_design='firwin', verbose=False)
+        print(f"  High-pass filtered copy at 1 Hz created for ICA fitting")
+
+        # Minimal filtering (0.1 Hz) for artifact channel reference
+        # This removes only very slow drifts while preserving low frequencies
+        raw_all_minimal = raw_all.copy().filter(l_freq=0.1, h_freq=None, fir_design='firwin', verbose=False)
+        print(f"  Minimal high-pass filter (0.1 Hz) applied to artifact channels")
 
         # 5. ICA artifact removal
-        print(f"\n[5/15] Fitting ICA on iEEG channels...")
+        print(f"\n[5/15] Fitting ICA on high-pass filtered copy (1 Hz)...")
         ica = mne.preprocessing.ICA(
             n_components=0.99,
             method='fastica',
@@ -1236,18 +1451,20 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
             max_iter=800,
             verbose=False
         )
-        # Fit on filtered iEEG data
-        ica.fit(raw_ieeg_filt, decim=3, verbose=False)
+        # Fit on 1 Hz high-passed data for better ICA performance
+        ica.fit(raw_ieeg_for_ica, decim=3, verbose=False)
         print(f"  ICA fitted with {ica.n_components_} components")
 
-        # Get ICA sources from iEEG channels
-        ica_sources = ica.get_sources(raw_ieeg_filt)
+        # IMPORTANT: Extract ICA sources from ORIGINAL unfiltered iEEG data
+        # This preserves all frequency information for artifact detection
+        ica_sources = ica.get_sources(raw_ieeg)
+        print(f"  ICA sources extracted from original unfiltered data")
 
         # Detect artifacts using correlation with EOG/ECG/EMG channels
         print(f"\n[6/15] Detecting artifacts...")
-        eog_indices = detect_eog_artifacts(ica, ica_sources, raw_all_filt, eog_channels)
-        ecg_indices = detect_ecg_artifacts(ica, ica_sources, raw_all_filt, ecg_channels)
-        emg_indices = detect_emg_artifacts(ica, ica_sources, raw_all_filt, emg_channels)
+        eog_indices = detect_eog_artifacts(ica, ica_sources, raw_all_minimal, eog_channels)
+        ecg_indices = detect_ecg_artifacts(ica, ica_sources, raw_all_minimal, ecg_channels)
+        emg_indices = detect_emg_artifacts(ica, ica_sources, raw_all_minimal, emg_channels)
 
         # Combine all artifact indices
         all_artifact_indices = list(set(eog_indices + ecg_indices + emg_indices))
@@ -1256,11 +1473,27 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
         print(f"  Total artifact components to remove: {len(all_artifact_indices)}")
         print(f"  Component indices: {all_artifact_indices}")
 
-        # Apply ICA to the same filtered data it was trained on
-        raw_ieeg_clean = raw_ieeg_filt.copy()
+        # CRITICAL: Apply ICA to the ORIGINAL unfiltered data
+        # This preserves all frequency content while removing artifacts
+        raw_ieeg_clean = raw_ieeg.copy()
         ica.apply(raw_ieeg_clean, verbose=False)
-        print(f"  ICA applied successfully!")
+        print(f"  ICA applied to original unfiltered data")
         print(f"  Components removed: {len(all_artifact_indices)} out of {ica.n_components_}")
+        print(f"  ✓ All original frequency content preserved!")
+
+        # 6b. Create ICA comparison visualizations
+        print(f"\n[6b/15] Creating ICA comparison visualizations...")
+        ica_comparison_dir = os.path.join(output_base_dir, 'ica_comparison')
+        plot_ica_comparison(
+            raw_before=raw_ieeg,
+            raw_after=raw_ieeg_clean,
+            ica=ica,
+            channel_names=ieeg_channels,
+            subject_id=subject_id,
+            save_dir=ica_comparison_dir,
+            duration=10.0,
+            n_channels=6
+        )
 
         # 7. Notch filter
         print(f"\n[7/15] Applying notch filter...")
@@ -1329,7 +1562,8 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
             current_times = power_speech.times
             current_sfreq = 1 / (current_times[1] - current_times[0])
 
-            if not np.allclose(current_times, common_times, atol=0.01):
+            # Check if resampling is needed (check length first to avoid broadcast error)
+            if len(current_times) != len(common_times) or not np.allclose(current_times, common_times, atol=0.01):
                 print(f"  Resampling from {current_sfreq:.1f} Hz ({len(current_times)} pts) to {common_sfreq:.1f} Hz ({len(common_times)} pts)")
                 from scipy.interpolate import interp1d
 
@@ -1450,14 +1684,140 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
 
 
 # =============================================================================
+# CHECKPOINT AND RESUME FUNCTIONS
+# =============================================================================
+
+def is_subject_completed(subject_id, output_base_dir):
+    """
+    Check if a subject has already been processed successfully
+
+    Parameters:
+    -----------
+    subject_id : str
+        Subject identifier (e.g., 'sub-05')
+    output_base_dir : str
+        Base directory for output files
+
+    Returns:
+    --------
+    completed : bool
+        True if subject has been fully processed
+    """
+    # Check for critical output files
+    preprocessed_dir = Path(output_base_dir) / 'preprocessed_data'
+    theta_power_file = preprocessed_dir / f'{subject_id}_theta_power.npz'
+    roi_mapping_file = preprocessed_dir / f'{subject_id}_roi_mapping.csv'
+
+    subject_output_dir = Path(output_base_dir) / subject_id
+    summary_plot = subject_output_dir / f'{subject_id}_summary_cluster-based.png'
+    cluster_report = subject_output_dir / f'{subject_id}_cluster_report.txt'
+
+    # All critical files must exist for subject to be considered complete
+    critical_files = [theta_power_file, summary_plot, cluster_report]
+
+    all_exist = all(f.exists() for f in critical_files)
+
+    return all_exist
+
+
+def get_processing_status(subjects, output_base_dir):
+    """
+    Get processing status for all subjects
+
+    Parameters:
+    -----------
+    subjects : list
+        List of subject IDs
+    output_base_dir : str
+        Base directory for output files
+
+    Returns:
+    --------
+    completed : list
+        List of completed subject IDs
+    incomplete : list
+        List of incomplete subject IDs
+    """
+    completed = []
+    incomplete = []
+
+    for subject_id in subjects:
+        if is_subject_completed(subject_id, output_base_dir):
+            completed.append(subject_id)
+        else:
+            incomplete.append(subject_id)
+
+    return completed, incomplete
+
+
+# =============================================================================
 # MAIN EXECUTION
 # =============================================================================
 
 if __name__ == "__main__":
+    import argparse
+
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Run full iEEG preprocessing and analysis pipeline with resume capability",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Process all subjects (will resume from last checkpoint automatically)
+  python full_pipeline.py
+
+  # Force reprocess all subjects (ignore checkpoints)
+  python full_pipeline.py --force-reprocess
+
+  # Process specific subjects only
+  python full_pipeline.py --subjects sub-01,sub-05
+
+  # Show processing status without running
+  python full_pipeline.py --status-only
+        """
+    )
+
+    parser.add_argument(
+        "--data-dir",
+        type=str,
+        default=r"C:\DS003688\DS003688",
+        help="Root directory of BIDS dataset (default: C:\\DS003688\\DS003688)"
+    )
+    parser.add_argument(
+        "--electrode-results-dir",
+        type=str,
+        default="./electrode_results",
+        help="Directory containing electrode localization CSV files (default: ./electrode_results)"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="./results_theta",
+        help="Directory to save output files (default: ./results_theta)"
+    )
+    parser.add_argument(
+        "--subjects",
+        type=str,
+        default=None,
+        help="Comma-separated list of subjects to process (e.g., sub-01,sub-05). If not specified, processes all subjects."
+    )
+    parser.add_argument(
+        "--force-reprocess",
+        action="store_true",
+        help="Force reprocessing of all subjects, even if they are already completed"
+    )
+    parser.add_argument(
+        "--status-only",
+        action="store_true",
+        help="Show processing status and exit (don't run analysis)"
+    )
+
+    args = parser.parse_args()
+
     # Configuration
-    DATA_DIR = r"C:\DS003688\DS003688"
-    ELECTRODE_RESULTS_DIR = "./electrode_results"
-    OUTPUT_DIR = "./results_theta"
+    DATA_DIR = args.data_dir
+    ELECTRODE_RESULTS_DIR = args.electrode_results_dir
+    OUTPUT_DIR = args.output_dir
 
     # Discover subjects from electrode_results directory
     print("Discovering subjects from electrode localization results...")
@@ -1483,25 +1843,90 @@ if __name__ == "__main__":
 
     all_subjects = sorted(all_subjects)
 
+    # Filter subjects if specified
+    if args.subjects:
+        requested_subjects = [s.strip() for s in args.subjects.split(',')]
+        all_subjects = [s for s in all_subjects if s in requested_subjects]
+        print(f"\nFiltered to {len(all_subjects)} requested subjects: {', '.join(all_subjects)}")
+
+    if len(all_subjects) == 0:
+        print("\nERROR: No subjects to process!")
+        exit(1)
+
     print(f"\nFound {len(all_subjects)} subjects with perisylvian electrode data:")
     for subj in all_subjects:
         csv_path = electrode_results_path / f"{subj}_perisylvian_electrodes.csv"
         df = pd.read_csv(csv_path)
         print(f"  {subj}: {len(df)} perisylvian electrodes, {df['region'].nunique()} unique ROIs")
 
+    # Check processing status
+    print(f"\n{'='*80}")
+    print("CHECKING PROCESSING STATUS")
+    print(f"{'='*80}")
+
+    completed_subjects, incomplete_subjects = get_processing_status(all_subjects, OUTPUT_DIR)
+
+    print(f"\nProcessing status:")
+    print(f"  ✓ Completed: {len(completed_subjects)}/{len(all_subjects)}")
+    print(f"  ⧗ Incomplete: {len(incomplete_subjects)}/{len(all_subjects)}")
+
+    if completed_subjects:
+        print(f"\nAlready completed subjects:")
+        for subj in completed_subjects:
+            print(f"  ✓ {subj}")
+
+    if incomplete_subjects:
+        print(f"\nIncomplete/not started subjects:")
+        for subj in incomplete_subjects:
+            print(f"  ⧗ {subj}")
+
+    # Determine which subjects to process
+    if args.force_reprocess:
+        subjects_to_process = all_subjects
+        print(f"\n⚠ FORCE REPROCESS MODE: Will reprocess all {len(subjects_to_process)} subjects")
+    else:
+        subjects_to_process = incomplete_subjects
+        if len(completed_subjects) > 0:
+            print(f"\n✓ RESUME MODE: Skipping {len(completed_subjects)} completed subjects")
+        if len(subjects_to_process) == 0:
+            print(f"\n✓ All subjects already completed! Use --force-reprocess to rerun.")
+
+    # Status-only mode: exit without processing
+    if args.status_only:
+        print(f"\n{'='*80}")
+        print("STATUS REPORT COMPLETE (--status-only mode)")
+        print(f"{'='*80}")
+        exit(0)
+
+    if len(subjects_to_process) == 0:
+        print(f"\n{'='*80}")
+        print("NO SUBJECTS TO PROCESS")
+        print(f"{'='*80}")
+        exit(0)
+
     # Track results
     successful_subjects = []
     failed_subjects = []
+    skipped_subjects = []
+
+    # Add already-completed subjects to successful list
+    if not args.force_reprocess:
+        successful_subjects.extend(completed_subjects)
+        skipped_subjects = completed_subjects
 
     # Process each subject
     print(f"\n{'='*80}")
     print("STARTING BATCH PROCESSING")
+    print(f"{'='*80}")
+    print(f"Subjects to process: {len(subjects_to_process)}")
+    print(f"Subjects to skip: {len(skipped_subjects)}")
     print(f"{'='*80}\n")
 
     start_time_total = time.time()
 
-    for idx, subject_id in enumerate(all_subjects, 1):
-        print(f"\nProcessing subject {idx}/{len(all_subjects)}: {subject_id}")
+    for idx, subject_id in enumerate(subjects_to_process, 1):
+        print(f"\nProcessing subject {idx}/{len(subjects_to_process)}: {subject_id}")
+        print(f"(Total progress: {idx + len(skipped_subjects)}/{len(all_subjects)})")
 
         success = run_subject_pipeline(
             subject_id=subject_id,
@@ -1522,19 +1947,39 @@ if __name__ == "__main__":
     print("\n" + "="*80)
     print("BATCH PROCESSING COMPLETE")
     print("="*80)
-    print(f"\nTotal time: {total_time/60:.1f} minutes")
-    print(f"Successful subjects: {len(successful_subjects)}/{len(all_subjects)}")
-    print(f"Failed subjects: {len(failed_subjects)}/{len(all_subjects)}")
+    print(f"\nProcessing time: {total_time/60:.1f} minutes")
+    print(f"Subjects processed this run: {len(subjects_to_process)}")
+    print(f"Successful (total): {len(successful_subjects)}/{len(all_subjects)}")
+    print(f"Failed: {len(failed_subjects)}/{len(all_subjects)}")
+    if len(skipped_subjects) > 0:
+        print(f"Skipped (already completed): {len(skipped_subjects)}/{len(all_subjects)}")
 
-    if successful_subjects:
-        print(f"\nSuccessful subjects:")
-        for subj in successful_subjects:
+    if len(skipped_subjects) > 0 and not args.force_reprocess:
+        print(f"\nSkipped subjects (already completed):")
+        for subj in skipped_subjects:
+            print(f"  ⊙ {subj}")
+
+    # Split successful subjects into newly processed and previously completed
+    newly_successful = [s for s in successful_subjects if s not in skipped_subjects]
+
+    if newly_successful:
+        print(f"\nNewly processed subjects ({len(newly_successful)}):")
+        for subj in newly_successful:
             print(f"  ✓ {subj}")
 
     if failed_subjects:
-        print(f"\nFailed subjects:")
+        print(f"\nFailed subjects ({len(failed_subjects)}):")
         for subj in failed_subjects:
             print(f"  ✗ {subj}")
+        print(f"\nTo retry failed subjects, run:")
+        print(f"  python full_pipeline.py --subjects {','.join(failed_subjects)}")
 
     print(f"\nResults saved to: {OUTPUT_DIR}")
+
+    if len(incomplete_subjects) > len(failed_subjects):
+        remaining = [s for s in incomplete_subjects if s not in failed_subjects and s not in newly_successful]
+        if remaining:
+            print(f"\nTo resume interrupted processing, simply run:")
+            print(f"  python full_pipeline.py")
+
     print("="*80)

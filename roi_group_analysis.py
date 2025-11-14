@@ -229,6 +229,16 @@ class ROIGroupAnalyzer:
         if len(subjects_with_roi) < min_subjects:
             return None
 
+        # Validate that all time series have the same length
+        time_lengths = [len(ts) for ts in speech_timeseries_list]
+        if len(set(time_lengths)) > 1:
+            print(f"\n  ⚠️  WARNING: Time series length mismatch in ROI '{roi_name}':")
+            for subj, length in zip(subjects_with_roi, time_lengths):
+                print(f"      {subj}: {length} timepoints")
+            print(f"\n  This indicates subjects were processed with different parameters.")
+            print(f"  Please reprocess all subjects with: python full_pipeline.py --force-reprocess")
+            return None
+
         # Convert to arrays
         speech_array = np.array(speech_timeseries_list)  # (n_subjects, n_times)
         music_array = np.array(music_timeseries_list)
@@ -284,7 +294,7 @@ class ROIGroupAnalyzer:
         }
 
     def cluster_permutation_test_1d(self, speech_data, music_data, n_permutations=5000,
-                                   alpha=0.05, tail='two'):
+                                   alpha=0.05, tail='two', precluster_p=0.05):
         """
         Cluster-based permutation test for 1D time-series
 
@@ -297,9 +307,12 @@ class ROIGroupAnalyzer:
         n_permutations : int
             Number of permutations
         alpha : float
-            Significance level
+            Significance level for cluster-level test
         tail : str
             'two', 'positive', or 'negative'
+        precluster_p : float
+            P-value threshold for forming clusters (liberal threshold)
+            Default 0.05, use 0.1-0.2 for more sensitive detection
 
         Returns:
         --------
@@ -311,13 +324,25 @@ class ROIGroupAnalyzer:
         # Compute difference: speech - music
         differences = speech_data - music_data  # (n_subjects, n_times)
 
-        # Set threshold
+        print(f"    [DEBUG] Data shapes: speech={speech_data.shape}, music={music_data.shape}")
+        print(f"    [DEBUG] Differences shape: {differences.shape}")
+        print(f"    [DEBUG] Times shape: {len(self.times)}")
+
+        # Compute t-statistics manually to check
+        t_manual = (differences.mean(axis=0)) / (differences.std(axis=0, ddof=1) / np.sqrt(len(differences)))
+        print(f"    [DEBUG] T-stats range: [{np.min(t_manual):.3f}, {np.max(t_manual):.3f}]")
+        print(f"    [DEBUG] T-stats > 0: {np.sum(t_manual > 0)}, T-stats < 0: {np.sum(t_manual < 0)}")
+
+        # Set precluster threshold (more liberal for better cluster formation)
         if tail == 'two':
-            threshold = stats.t.ppf(1 - alpha/2, len(differences) - 1)
+            threshold = stats.t.ppf(1 - precluster_p/2, len(differences) - 1)
         elif tail == 'positive':
-            threshold = stats.t.ppf(1 - alpha, len(differences) - 1)
+            threshold = stats.t.ppf(1 - precluster_p, len(differences) - 1)
         else:  # negative
-            threshold = stats.t.ppf(alpha, len(differences) - 1)
+            threshold = stats.t.ppf(precluster_p, len(differences) - 1)
+
+        print(f"    [DEBUG] Precluster threshold: t = ±{threshold:.3f} (p = {precluster_p})")
+        print(f"    [DEBUG] Timepoints exceeding threshold: {np.sum(np.abs(t_manual) > threshold)}/{len(t_manual)}")
 
         # Run cluster test
         T_obs, clusters, cluster_p_values, H0 = permutation_cluster_1samp_test(
@@ -329,19 +354,66 @@ class ROIGroupAnalyzer:
             verbose=False
         )
 
+        print(f"    [DEBUG] MNE returned: T_obs shape={T_obs.shape}, n_clusters={len(clusters)}")
+        print(f"    [DEBUG] T_obs range: [{np.min(T_obs):.3f}, {np.max(T_obs):.3f}]")
+        if len(clusters) > 0:
+            # Calculate cluster sizes properly (handle tuples and slices)
+            cluster_sizes = []
+            for c in clusters[:5]:
+                # Unpack tuple if needed
+                if isinstance(c, tuple):
+                    c = c[0]
+
+                if isinstance(c, slice):
+                    size = c.stop - c.start
+                else:
+                    size = np.sum(c)
+                cluster_sizes.append(size)
+            print(f"    [DEBUG] First 5 cluster sizes (timepoints): {cluster_sizes}")
+            print(f"    [DEBUG] First 5 cluster p-values: {cluster_p_values[:5]}")
+
         # Find significant clusters
         sig_clusters = []
         for cluster_idx, cluster_mask in enumerate(clusters):
             if cluster_p_values[cluster_idx] < alpha:
-                time_indices = np.where(cluster_mask)[0]
+                # DEBUG: Show what we received
+                print(f"    [DEBUG] Cluster {cluster_idx+1} (p={cluster_p_values[cluster_idx]:.4f}): "
+                      f"type={type(cluster_mask)}, value={cluster_mask}")
+
+                # Handle tuple wrapping (MNE returns tuples for 1D data)
+                if isinstance(cluster_mask, tuple):
+                    cluster_mask = cluster_mask[0]  # Unpack single-element tuple
+                    print(f"    [DEBUG]   -> Unpacked tuple, inner type={type(cluster_mask)}")
+
+                # Handle both slice objects and boolean arrays
+                if isinstance(cluster_mask, slice):
+                    # Convert slice to array of indices
+                    time_indices = np.arange(cluster_mask.start, cluster_mask.stop,
+                                            cluster_mask.step if cluster_mask.step else 1)
+                    print(f"    [DEBUG]   -> Converted slice to {len(time_indices)} indices: {time_indices[:10]}...")
+                else:
+                    # Boolean mask - get True indices
+                    time_indices = np.where(cluster_mask)[0]
+                    print(f"    [DEBUG]   -> Boolean mask, found {len(time_indices)} True values")
+
+                # DEBUG: Print cluster info
+                print(f"    [DEBUG] Cluster {cluster_idx+1}: {len(time_indices)} timepoints, "
+                      f"indices: {time_indices[:5]}...{time_indices[-5:] if len(time_indices) > 5 else time_indices}")
+
+                if len(time_indices) == 0:
+                    print(f"    [WARNING] Cluster {cluster_idx+1} has no timepoints! Skipping.")
+                    continue
+
                 sig_clusters.append({
                     'time_indices': time_indices,
                     'start_time': self.times[time_indices[0]],
                     'end_time': self.times[time_indices[-1]],
                     'duration': self.times[time_indices[-1]] - self.times[time_indices[0]],
                     'p_value': cluster_p_values[cluster_idx],
-                    'cluster_stat': np.sum(np.abs(T_obs[cluster_mask]))
+                    'cluster_stat': np.sum(np.abs(T_obs[time_indices]))  # Use time_indices, not cluster_mask
                 })
+
+                print(f"    [DEBUG] Cluster times: {self.times[time_indices[0]]:.3f}s to {self.times[time_indices[-1]]:.3f}s")
 
         return {
             't_obs': T_obs,
@@ -352,7 +424,8 @@ class ROIGroupAnalyzer:
             'threshold': threshold
         }
 
-    def analyze_roi(self, roi_name, method='cluster', min_subjects=3, n_permutations=5000):
+    def analyze_roi(self, roi_name, method='cluster', min_subjects=3, n_permutations=5000,
+                   precluster_p=0.1):
         """
         Perform complete analysis for a single ROI
 
@@ -366,6 +439,8 @@ class ROIGroupAnalyzer:
             Minimum subjects required
         n_permutations : int
             For cluster method
+        precluster_p : float
+            P-value threshold for cluster formation (default 0.1 for better sensitivity)
 
         Returns:
         --------
@@ -397,9 +472,9 @@ class ROIGroupAnalyzer:
             print(f"\n  Running paired t-test with FDR correction...")
             stats_results = self.paired_ttest_timeseries(speech_data, music_data)
         elif method == 'cluster':
-            print(f"\n  Running cluster-based permutation test ({n_permutations} permutations)...")
+            print(f"\n  Running cluster-based permutation test ({n_permutations} permutations, precluster_p={precluster_p})...")
             stats_results = self.cluster_permutation_test_1d(
-                speech_data, music_data, n_permutations=n_permutations
+                speech_data, music_data, n_permutations=n_permutations, precluster_p=precluster_p
             )
         else:
             raise ValueError(f"Unknown method: {method}")
@@ -441,6 +516,8 @@ class ROIGroupAnalyzer:
         roi_dataset = results['roi_dataset']
         stats_results = results['stats']
 
+        print(f"\n  [DEBUG] Starting plot for {roi_name}, method={method}, save={save}")
+
         speech_data = roi_dataset['speech_timeseries']
         music_data = roi_dataset['music_timeseries']
         n_subjects = len(roi_dataset['subjects'])
@@ -457,26 +534,34 @@ class ROIGroupAnalyzer:
         # --- Top panel: Time-series with error bars ---
         ax = axes[0]
 
-        # Plot group averages
-        ax.plot(self.times, speech_mean, 'b-', linewidth=2, label='Speech')
-        ax.fill_between(self.times, speech_mean - speech_sem, speech_mean + speech_sem,
-                        alpha=0.3, color='blue')
+        # Determine y-limits first for proper shading
+        y_min_data = min(np.min(speech_mean - speech_sem), np.min(music_mean - music_sem))
+        y_max_data = max(np.max(speech_mean + speech_sem), np.max(music_mean + music_sem))
+        y_range = y_max_data - y_min_data
+        y_min = y_min_data - 0.1 * y_range
+        y_max = y_max_data + 0.1 * y_range
+        ax.set_ylim(y_min, y_max)
 
-        ax.plot(self.times, music_mean, 'r-', linewidth=2, label='Music')
-        ax.fill_between(self.times, music_mean - music_sem, music_mean + music_sem,
-                        alpha=0.3, color='red')
-
-        # Highlight significant time windows
+        # Highlight significant time windows FIRST (so they appear behind data)
         if method == 'ttest':
             sig_mask = stats_results['significant_mask_fdr']
             if np.any(sig_mask):
-                y_min, y_max = ax.get_ylim()
                 ax.fill_between(self.times, y_min, y_max, where=sig_mask,
-                               alpha=0.2, color='green', label='Significant (FDR)')
+                               alpha=0.2, color='green', label='Significant (FDR)', zorder=1)
         elif method == 'cluster':
-            for cluster in stats_results['significant_clusters']:
+            for i, cluster in enumerate(stats_results['significant_clusters']):
+                label = 'Significant cluster' if i == 0 else None  # Only label first cluster
                 ax.axvspan(cluster['start_time'], cluster['end_time'],
-                          alpha=0.2, color='green', label='Significant cluster')
+                          alpha=0.3, color='green', label=label, zorder=2)
+
+        # Plot group averages ON TOP of shaded regions
+        ax.plot(self.times, speech_mean, 'b-', linewidth=2, label='Speech', zorder=3)
+        ax.fill_between(self.times, speech_mean - speech_sem, speech_mean + speech_sem,
+                        alpha=0.3, color='blue', zorder=3)
+
+        ax.plot(self.times, music_mean, 'r-', linewidth=2, label='Music', zorder=3)
+        ax.fill_between(self.times, music_mean - music_sem, music_mean + music_sem,
+                        alpha=0.3, color='red', zorder=3)
 
         ax.set_xlabel('Time (s)', fontsize=12)
         ax.set_ylabel('Theta Power (a.u.)', fontsize=12)
@@ -531,13 +616,17 @@ class ROIGroupAnalyzer:
 
         if save:
             save_path = self.output_dir / f"{roi_name}_{method}.png"
+            print(f"\n  [DEBUG] Saving to: {save_path}")
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"\n  [OK] Figure saved to: {save_path}")
+            print(f"  [OK] Figure saved successfully!")
+        else:
+            print(f"\n  [DEBUG] save=False, not saving figure")
 
         plt.close()
+        print(f"  [DEBUG] Plot closed for {roi_name}")
 
     def run_all_rois(self, method='cluster', min_subjects=3, n_permutations=5000,
-                    top_n=None):
+                    precluster_p=0.1, top_n=None):
         """
         Run analysis for all ROIs with sufficient coverage
 
@@ -549,6 +638,8 @@ class ROIGroupAnalyzer:
             Minimum subjects required
         n_permutations : int
             For cluster method
+        precluster_p : float
+            P-value threshold for cluster formation (default 0.1)
         top_n : int or None
             If provided, only analyze top N ROIs by subject coverage
 
@@ -584,17 +675,27 @@ class ROIGroupAnalyzer:
         for roi_name in valid_rois:
             try:
                 results = self.analyze_roi(roi_name, method=method, min_subjects=min_subjects,
-                                         n_permutations=n_permutations)
+                                         n_permutations=n_permutations, precluster_p=precluster_p)
 
                 if results is not None:
                     all_results[roi_name] = results
-                    self.plot_roi_results(results, save=True)
-                    successful += 1
+
+                    # Plot with error handling
+                    try:
+                        self.plot_roi_results(results, save=True)
+                        successful += 1
+                    except Exception as plot_error:
+                        print(f"\n  ⚠️  WARNING: Plotting failed for {roi_name}: {str(plot_error)}")
+                        import traceback
+                        traceback.print_exc()
+                        successful += 1  # Still count as successful analysis
                 else:
                     failed += 1
 
             except Exception as e:
                 print(f"\n  ❌ ERROR analyzing {roi_name}: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 failed += 1
 
         # Create summary report
@@ -685,11 +786,12 @@ def main():
     Main execution function
     """
     # Configuration
-    PREPROCESSED_DATA_DIR = "./test_pipeline_output/preprocessed_data"
+    PREPROCESSED_DATA_DIR = "./results_theta/preprocessed_data"
     OUTPUT_DIR = "./roi_group_results"
-    METHOD = "ttest"  # 'ttest' or 'cluster' (use ttest for single subject testing)
-    MIN_SUBJECTS = 1  # Minimum subjects required per ROI (set to 1 for testing)
+    METHOD = "cluster"  # 'ttest' or 'cluster' (cluster recommended for robust group analysis)
+    MIN_SUBJECTS = 2  # Minimum subjects required per ROI for group analysis
     N_PERMUTATIONS = 5000
+    PRECLUSTER_P = 0.1  # Liberal threshold for cluster formation (0.05=strict, 0.1=moderate, 0.2=liberal)
 
     print("="*80)
     print("ROI-SPECIFIC GROUP ANALYSIS")
@@ -700,6 +802,7 @@ def main():
     print(f"  Method: {METHOD}")
     print(f"  Minimum subjects per ROI: {MIN_SUBJECTS}")
     print(f"  Permutations (if cluster): {N_PERMUTATIONS}")
+    print(f"  Precluster threshold (if cluster): p={PRECLUSTER_P}")
 
     # Initialize analyzer
     analyzer = ROIGroupAnalyzer(PREPROCESSED_DATA_DIR, OUTPUT_DIR)
@@ -720,6 +823,7 @@ def main():
         method=METHOD,
         min_subjects=MIN_SUBJECTS,
         n_permutations=N_PERMUTATIONS,
+        precluster_p=PRECLUSTER_P,
         top_n=None  # Set to a number to limit analysis to top N ROIs
     )
 
