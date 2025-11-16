@@ -1021,6 +1021,327 @@ def plot_ica_comparison(raw_before, raw_after, ica, channel_names, subject_id,
     print(f"  [OK] ICA comparison visualizations complete!")
 
 
+def create_preprocessing_qc_plots(raw_after_ica, raw_after_notch, raw_after_bandpass,
+                                   raw_after_car, epochs, power_speech, power_music,
+                                   channel_names, subject_id, save_dir='./preprocessing_qc'):
+    """
+    Create comprehensive quality control visualizations for all preprocessing steps
+
+    Parameters:
+    -----------
+    raw_after_ica : mne.io.Raw
+        Raw data after ICA artifact removal
+    raw_after_notch : mne.io.Raw
+        Raw data after notch filter
+    raw_after_bandpass : mne.io.Raw
+        Raw data after bandpass filter
+    raw_after_car : mne.io.Raw
+        Raw data after common average reference
+    epochs : mne.Epochs
+        Epoched data (speech and music)
+    power_speech : mne.time_frequency.EpochsTFR
+        Time-frequency power for speech
+    power_music : mne.time_frequency.EpochsTFR
+        Time-frequency power for music
+    channel_names : list
+        List of channel names
+    subject_id : str
+        Subject identifier
+    save_dir : str
+        Directory to save QC plots
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    from matplotlib.patches import Rectangle
+
+    os.makedirs(save_dir, exist_ok=True)
+    print(f"\n  Creating preprocessing QC visualizations...")
+
+    # Select representative channels for visualization (up to 6)
+    n_viz_channels = min(6, len(channel_names))
+    viz_channel_indices = np.linspace(0, len(channel_names)-1, n_viz_channels, dtype=int)
+    viz_channels = [channel_names[i] for i in viz_channel_indices]
+
+    # ===========================================================================
+    # PLOT 1: Notch Filter Comparison (PSD Before/After)
+    # ===========================================================================
+    print(f"    Creating notch filter comparison...")
+    fig = plt.figure(figsize=(14, 8))
+    gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
+
+    # PSD before notch
+    ax1 = fig.add_subplot(gs[0, 0])
+    psd_before = raw_after_ica.compute_psd(method='welch', fmin=0.5, fmax=200,
+                                           n_fft=2048, picks=viz_channels)
+    psd_before.plot(axes=ax1, show=False, average=True, amplitude=False)
+    ax1.set_title(f'Before Notch Filter\n(Avg across {n_viz_channels} channels)', fontsize=12, fontweight='bold')
+    ax1.set_xlabel('Frequency (Hz)')
+    ax1.set_ylabel('Power Spectral Density (dB)')
+    ax1.axvline(50, color='red', linestyle='--', alpha=0.5, label='50 Hz')
+    ax1.axvline(100, color='red', linestyle='--', alpha=0.3, label='100 Hz')
+    ax1.axvline(150, color='red', linestyle='--', alpha=0.3, label='150 Hz')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    # PSD after notch
+    ax2 = fig.add_subplot(gs[0, 1])
+    psd_after = raw_after_notch.compute_psd(method='welch', fmin=0.5, fmax=200,
+                                            n_fft=2048, picks=viz_channels)
+    psd_after.plot(axes=ax2, show=False, average=True, amplitude=False)
+    ax2.set_title(f'After Notch Filter\n(50, 100, 150 Hz removed)', fontsize=12, fontweight='bold')
+    ax2.set_xlabel('Frequency (Hz)')
+    ax2.set_ylabel('Power Spectral Density (dB)')
+    ax2.axvline(50, color='green', linestyle='--', alpha=0.5, label='50 Hz notched')
+    ax2.axvline(100, color='green', linestyle='--', alpha=0.3, label='100 Hz notched')
+    ax2.axvline(150, color='green', linestyle='--', alpha=0.3, label='150 Hz notched')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    # Time series comparison (one channel)
+    duration = 5.0  # 5 seconds
+    start_time = 10.0
+
+    ax3 = fig.add_subplot(gs[1, :])
+    times = np.arange(0, duration, 1/raw_after_ica.info['sfreq'])
+
+    # Get data for one representative channel
+    ch_idx = viz_channel_indices[0]
+    data_before, _ = raw_after_ica.copy().pick([channel_names[ch_idx]]).get_data(start=int(start_time*raw_after_ica.info['sfreq']),
+                                                                                   stop=int((start_time+duration)*raw_after_ica.info['sfreq']),
+                                                                                   return_times=True)
+    data_after, _ = raw_after_notch.copy().pick([channel_names[ch_idx]]).get_data(start=int(start_time*raw_after_notch.info['sfreq']),
+                                                                                    stop=int((start_time+duration)*raw_after_notch.info['sfreq']),
+                                                                                    return_times=True)
+
+    ax3.plot(times[:len(data_before[0])], data_before[0]*1e6, 'b-', alpha=0.7, label='Before Notch', linewidth=1)
+    ax3.plot(times[:len(data_after[0])], data_after[0]*1e6, 'r-', alpha=0.7, label='After Notch', linewidth=1)
+    ax3.set_xlabel('Time (s)', fontsize=11)
+    ax3.set_ylabel('Amplitude (µV)', fontsize=11)
+    ax3.set_title(f'Time Series Comparison: {channel_names[ch_idx]}', fontsize=12, fontweight='bold')
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+
+    plt.suptitle(f'{subject_id}: Notch Filter Quality Control (50 Hz Line Noise + Harmonics Removal)',
+                 fontsize=14, fontweight='bold', y=0.98)
+
+    save_path = os.path.join(save_dir, f'{subject_id}_07_notch_filter_QC.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {save_path}")
+    plt.close()
+
+    # ===========================================================================
+    # PLOT 2: Bandpass Filter Comparison (PSD Before/After)
+    # ===========================================================================
+    print(f"    Creating bandpass filter comparison...")
+    fig = plt.figure(figsize=(14, 8))
+    gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
+
+    # PSD before bandpass
+    ax1 = fig.add_subplot(gs[0, 0])
+    psd_before = raw_after_notch.compute_psd(method='welch', fmin=0.1, fmax=250,
+                                             n_fft=2048, picks=viz_channels)
+    psd_before.plot(axes=ax1, show=False, average=True, amplitude=False)
+    ax1.set_title(f'Before Bandpass Filter\n(Avg across {n_viz_channels} channels)', fontsize=12, fontweight='bold')
+    ax1.set_xlabel('Frequency (Hz)')
+    ax1.set_ylabel('Power Spectral Density (dB)')
+    ax1.axvline(0.1, color='red', linestyle='--', alpha=0.5, label='Low cutoff (0.1 Hz)')
+    ax1.axvline(200, color='red', linestyle='--', alpha=0.5, label='High cutoff (200 Hz)')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    # PSD after bandpass
+    ax2 = fig.add_subplot(gs[0, 1])
+    psd_after = raw_after_bandpass.compute_psd(method='welch', fmin=0.1, fmax=250,
+                                               n_fft=2048, picks=viz_channels)
+    psd_after.plot(axes=ax2, show=False, average=True, amplitude=False)
+    ax2.set_title(f'After Bandpass Filter\n(0.1-200 Hz)', fontsize=12, fontweight='bold')
+    ax2.set_xlabel('Frequency (Hz)')
+    ax2.set_ylabel('Power Spectral Density (dB)')
+    ax2.axvspan(0.1, 200, alpha=0.1, color='green', label='Pass band')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    # Time series comparison
+    ax3 = fig.add_subplot(gs[1, :])
+    data_before, _ = raw_after_notch.copy().pick([channel_names[ch_idx]]).get_data(start=int(start_time*raw_after_notch.info['sfreq']),
+                                                                                     stop=int((start_time+duration)*raw_after_notch.info['sfreq']),
+                                                                                     return_times=True)
+    data_after, _ = raw_after_bandpass.copy().pick([channel_names[ch_idx]]).get_data(start=int(start_time*raw_after_bandpass.info['sfreq']),
+                                                                                       stop=int((start_time+duration)*raw_after_bandpass.info['sfreq']),
+                                                                                       return_times=True)
+
+    ax3.plot(times[:len(data_before[0])], data_before[0]*1e6, 'b-', alpha=0.7, label='Before Bandpass', linewidth=1)
+    ax3.plot(times[:len(data_after[0])], data_after[0]*1e6, 'r-', alpha=0.7, label='After Bandpass', linewidth=1)
+    ax3.set_xlabel('Time (s)', fontsize=11)
+    ax3.set_ylabel('Amplitude (µV)', fontsize=11)
+    ax3.set_title(f'Time Series Comparison: {channel_names[ch_idx]}', fontsize=12, fontweight='bold')
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+
+    plt.suptitle(f'{subject_id}: Bandpass Filter Quality Control (0.1-200 Hz)',
+                 fontsize=14, fontweight='bold', y=0.98)
+
+    save_path = os.path.join(save_dir, f'{subject_id}_08_bandpass_filter_QC.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {save_path}")
+    plt.close()
+
+    # ===========================================================================
+    # PLOT 3: Common Average Reference Comparison
+    # ===========================================================================
+    print(f"    Creating common average reference comparison...")
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
+
+    duration = 3.0
+    times = np.arange(0, duration, 1/raw_after_bandpass.info['sfreq'])
+
+    # Before CAR - plot multiple channels
+    ax1 = axes[0]
+    for i, ch_name in enumerate(viz_channels):
+        data_before, _ = raw_after_bandpass.copy().pick([ch_name]).get_data(start=int(start_time*raw_after_bandpass.info['sfreq']),
+                                                                              stop=int((start_time+duration)*raw_after_bandpass.info['sfreq']),
+                                                                              return_times=True)
+        ax1.plot(times[:len(data_before[0])], data_before[0]*1e6 + i*100, label=ch_name, linewidth=0.8)
+
+    ax1.set_ylabel('Amplitude (µV, offset)', fontsize=11)
+    ax1.set_title('Before Common Average Reference', fontsize=12, fontweight='bold')
+    ax1.legend(loc='right', fontsize=8)
+    ax1.grid(True, alpha=0.3)
+
+    # After CAR
+    ax2 = axes[1]
+    for i, ch_name in enumerate(viz_channels):
+        data_after, _ = raw_after_car.copy().pick([ch_name]).get_data(start=int(start_time*raw_after_car.info['sfreq']),
+                                                                        stop=int((start_time+duration)*raw_after_car.info['sfreq']),
+                                                                        return_times=True)
+        ax2.plot(times[:len(data_after[0])], data_after[0]*1e6 + i*100, label=ch_name, linewidth=0.8)
+
+    ax2.set_xlabel('Time (s)', fontsize=11)
+    ax2.set_ylabel('Amplitude (µV, offset)', fontsize=11)
+    ax2.set_title('After Common Average Reference (noise reduction)', fontsize=12, fontweight='bold')
+    ax2.legend(loc='right', fontsize=8)
+    ax2.grid(True, alpha=0.3)
+
+    plt.suptitle(f'{subject_id}: Common Average Reference Quality Control',
+                 fontsize=14, fontweight='bold')
+    plt.tight_layout()
+
+    save_path = os.path.join(save_dir, f'{subject_id}_09_CAR_QC.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {save_path}")
+    plt.close()
+
+    # ===========================================================================
+    # PLOT 4: Epochs Overview
+    # ===========================================================================
+    print(f"    Creating epochs overview...")
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+
+    # Plot 1: Epoch counts
+    ax1 = axes[0, 0]
+    conditions = ['Speech', 'Music']
+    counts = [len(epochs['speech']), len(epochs['music'])]
+    colors = ['#3498db', '#e74c3c']
+    bars = ax1.bar(conditions, counts, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+    ax1.set_ylabel('Number of Epochs', fontsize=11)
+    ax1.set_title('Epoch Counts by Condition', fontsize=12, fontweight='bold')
+    ax1.grid(True, axis='y', alpha=0.3)
+
+    # Add count labels on bars
+    for bar, count in zip(bars, counts):
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(count)}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+
+    # Plot 2: Average evoked response (speech) - one channel
+    ax2 = axes[0, 1]
+    speech_avg = epochs['speech'].copy().pick([channel_names[ch_idx]]).average()
+    times_epoch = speech_avg.times
+    ax2.plot(times_epoch, speech_avg.data[0]*1e6, 'b-', linewidth=2, label='Speech avg')
+    ax2.axhline(0, color='black', linestyle='--', alpha=0.3)
+    ax2.axvline(0, color='red', linestyle='--', alpha=0.3, label='Stimulus onset')
+    ax2.set_xlabel('Time (s)', fontsize=11)
+    ax2.set_ylabel('Amplitude (µV)', fontsize=11)
+    ax2.set_title(f'Average Speech Response: {channel_names[ch_idx]}', fontsize=12, fontweight='bold')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    # Plot 3: Average evoked response (music) - same channel
+    ax3 = axes[1, 0]
+    music_avg = epochs['music'].copy().pick([channel_names[ch_idx]]).average()
+    ax3.plot(times_epoch, music_avg.data[0]*1e6, 'r-', linewidth=2, label='Music avg')
+    ax3.axhline(0, color='black', linestyle='--', alpha=0.3)
+    ax3.axvline(0, color='red', linestyle='--', alpha=0.3, label='Stimulus onset')
+    ax3.set_xlabel('Time (s)', fontsize=11)
+    ax3.set_ylabel('Amplitude (µV)', fontsize=11)
+    ax3.set_title(f'Average Music Response: {channel_names[ch_idx]}', fontsize=12, fontweight='bold')
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+
+    # Plot 4: Overlay comparison
+    ax4 = axes[1, 1]
+    ax4.plot(times_epoch, speech_avg.data[0]*1e6, 'b-', linewidth=2, label='Speech', alpha=0.7)
+    ax4.plot(times_epoch, music_avg.data[0]*1e6, 'r-', linewidth=2, label='Music', alpha=0.7)
+    ax4.axhline(0, color='black', linestyle='--', alpha=0.3)
+    ax4.axvline(0, color='green', linestyle='--', alpha=0.3, label='Stimulus onset')
+    ax4.set_xlabel('Time (s)', fontsize=11)
+    ax4.set_ylabel('Amplitude (µV)', fontsize=11)
+    ax4.set_title(f'Speech vs Music Comparison: {channel_names[ch_idx]}', fontsize=12, fontweight='bold')
+    ax4.legend()
+    ax4.grid(True, alpha=0.3)
+
+    plt.suptitle(f'{subject_id}: Epochs Quality Control', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+
+    save_path = os.path.join(save_dir, f'{subject_id}_10_epochs_QC.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {save_path}")
+    plt.close()
+
+    # ===========================================================================
+    # PLOT 5: Time-Frequency Examples
+    # ===========================================================================
+    print(f"    Creating time-frequency examples...")
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+
+    # Select 3 representative channels
+    n_tf_channels = min(3, len(channel_names))
+    tf_channel_indices = np.linspace(0, len(channel_names)-1, n_tf_channels, dtype=int)
+
+    for idx, ch_idx_tf in enumerate(tf_channel_indices):
+        # Speech TFR
+        ax_speech = axes[0, idx]
+        speech_data = power_speech.data[:, ch_idx_tf, :, :].mean(axis=0)  # Average across epochs
+        im = ax_speech.pcolormesh(power_speech.times, power_speech.freqs, speech_data,
+                                   cmap='RdBu_r', shading='auto')
+        ax_speech.set_xlabel('Time (s)', fontsize=10)
+        ax_speech.set_ylabel('Frequency (Hz)', fontsize=10)
+        ax_speech.set_title(f'Speech: {channel_names[ch_idx_tf]}', fontsize=11, fontweight='bold')
+        plt.colorbar(im, ax=ax_speech, label='Power')
+
+        # Music TFR
+        ax_music = axes[1, idx]
+        music_data = power_music.data[:, ch_idx_tf, :, :].mean(axis=0)  # Average across epochs
+        im = ax_music.pcolormesh(power_music.times, power_music.freqs, music_data,
+                                  cmap='RdBu_r', shading='auto')
+        ax_music.set_xlabel('Time (s)', fontsize=10)
+        ax_music.set_ylabel('Frequency (Hz)', fontsize=10)
+        ax_music.set_title(f'Music: {channel_names[ch_idx_tf]}', fontsize=11, fontweight='bold')
+        plt.colorbar(im, ax=ax_music, label='Power')
+
+    plt.suptitle(f'{subject_id}: Time-Frequency Analysis Examples (Theta Band 4-8 Hz)',
+                 fontsize=14, fontweight='bold')
+    plt.tight_layout()
+
+    save_path = os.path.join(save_dir, f'{subject_id}_11_timefrequency_examples.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"    Saved: {save_path}")
+    plt.close()
+
+    print(f"  [OK] Preprocessing QC visualizations complete!")
+    print(f"  Saved 5 QC plots to: {save_dir}")
+
+
 def plot_tf_results(results, channel_names, freqs, times, subject_id,
                     save_dir='.', show_plots=False):
     """
@@ -1541,6 +1862,22 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
 
         print(f"  Speech power shape: {power_speech.data.shape}")
         print(f"  Music power shape: {power_music.data.shape}")
+
+        # 11b. Create preprocessing quality control visualizations
+        print(f"\n[11b/15] Creating preprocessing quality control visualizations...")
+        qc_dir = os.path.join(subject_output_dir, 'preprocessing_qc')
+        create_preprocessing_qc_plots(
+            raw_after_ica=raw_ieeg_clean,
+            raw_after_notch=raw_notched,
+            raw_after_bandpass=raw_bandpass,
+            raw_after_car=raw_referenced,
+            epochs=epochs,
+            power_speech=power_speech,
+            power_music=power_music,
+            channel_names=ieeg_channels,
+            subject_id=subject_id,
+            save_dir=qc_dir
+        )
 
         # 12. Save preprocessed theta power data for group analysis
         if save_preprocessed:
