@@ -1,0 +1,135 @@
+================================================================================
+CLUSTER-BASED PERMUTATION TEST RESULTS
+Subject: sub-23
+================================================================================
+
+OVERALL SUMMARY
+--------------------------------------------------------------------------------
+Method: cluster-based (MNE standard)
+Total channels analyzed: 45
+Channels with significant clusters: 4
+Total significant clusters: 4
+Total significant pixels: 353
+Percentage of all pixels: 0.05%
+
+EFFECT DIRECTION
+--------------------------------------------------------------------------------
+Significant pixels with positive t (Speech > Music): 158
+Significant pixels with negative t (Music > Speech): 195
+
+INTERPRETATION: Music shows higher alpha power than Speech
+
+DETAILED CLUSTER INFORMATION BY CHANNEL
+================================================================================
+
+Channel 3: AIL8
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 240.9
+
+  Cluster 1:
+    Size: 120 pixels
+    Cluster mass: 240.9
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 0.98 seconds
+    Mean t-statistic: 1.124
+    Peak t-statistic: 5.823
+    Effect direction: Speech > Music
+
+
+Channel 14: COL6
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 267.4
+
+  Cluster 1:
+    Size: 154 pixels
+    Cluster mass: 267.4
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.27 seconds
+    Mean t-statistic: -0.388
+    Peak t-statistic: -2.125
+    Effect direction: Music > Speech
+
+
+Channel 18: POL5
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 281.9
+
+  Cluster 1:
+    Size: 183 pixels
+    Cluster mass: 281.9
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.45 seconds
+    Mean t-statistic: -0.091
+    Peak t-statistic: -1.825
+    Effect direction: Music > Speech
+
+
+Channel 26: AL10
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 424.8
+
+  Cluster 1:
+    Size: 217 pixels
+    Cluster mass: 424.8
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.75 seconds
+    Mean t-statistic: -1.130
+    Peak t-statistic: -3.504
+    Effect direction: Music > Speech
+
+
+CHANNELS WITHOUT SIGNIFICANT CLUSTERS
+--------------------------------------------------------------------------------
+  Channel 0: AIL1
+  Channel 1: AIL2
+  Channel 2: AIL3
+  Channel 4: IPL2
+  Channel 5: FOL1
+  Channel 6: FOL2
+  Channel 7: FOL3
+  Channel 8: FOL4
+  Channel 9: FOL5
+  Channel 10: FOL6
+  Channel 11: FOL8
+  Channel 12: COL1
+  Channel 13: COL5
+  Channel 15: COL7
+  Channel 16: COL8
+  Channel 17: POL1
+  Channel 19: POL6
+  Channel 20: POL7
+  Channel 21: POL8
+  Channel 22: POL9
+  Channel 23: POL10
+  Channel 24: AL7
+  Channel 25: AL9
+  Channel 27: AL11
+  Channel 28: AL12
+  Channel 29: AHL8
+  Channel 30: AHL10
+  Channel 31: AHL11
+  Channel 32: AHL12
+  Channel 33: PHL9
+  Channel 34: PHL12
+  Channel 35: IPR1
+  Channel 36: IPR2
+  Channel 37: IPR3
+  Channel 38: IPR8
+  Channel 39: PCR13
+  Channel 40: PCR14
+  Channel 41: PCR15
+  Channel 42: AHR10
+  Channel 43: AHR11
+  Channel 44: AHR12
+
+STATISTICAL PARAMETERS
+================================================================================
+Precluster threshold (uncorrected): p < 0.05
+Precluster t-value: 2.201
+Cluster statistic type: mass (sum of absolute t-values)
+Number of permutations: 5000
+Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)

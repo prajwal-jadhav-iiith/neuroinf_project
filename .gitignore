@@ -5,7 +5,6 @@ Freesurfer
 nul
 .c*
 *.md
-results_theta/*
 test_pipeline_output/*
 __pycache__/*
-roi_group_results/*
+*.npz

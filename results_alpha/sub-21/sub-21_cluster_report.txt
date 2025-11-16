@@ -1,0 +1,189 @@
+================================================================================
+CLUSTER-BASED PERMUTATION TEST RESULTS
+Subject: sub-21
+================================================================================
+
+OVERALL SUMMARY
+--------------------------------------------------------------------------------
+Method: cluster-based (MNE standard)
+Total channels analyzed: 39
+Channels with significant clusters: 7
+Total significant clusters: 9
+Total significant pixels: 1122
+Percentage of all pixels: 0.17%
+
+EFFECT DIRECTION
+--------------------------------------------------------------------------------
+Significant pixels with positive t (Speech > Music): 686
+Significant pixels with negative t (Music > Speech): 436
+
+INTERPRETATION: Speech shows higher alpha power than Music
+
+DETAILED CLUSTER INFORMATION BY CHANNEL
+================================================================================
+
+Channel 8: IPR3
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 256.6
+
+  Cluster 1:
+    Size: 181 pixels
+    Cluster mass: 256.6
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.52 seconds
+    Mean t-statistic: 0.435
+    Peak t-statistic: 1.584
+    Effect direction: Speech > Music
+
+
+Channel 9: IPR4
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 250.3
+
+  Cluster 1:
+    Size: 178 pixels
+    Cluster mass: 250.3
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.47 seconds
+    Mean t-statistic: 0.383
+    Peak t-statistic: 1.745
+    Effect direction: Speech > Music
+
+
+Channel 11: PHR5
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 401.2
+
+  Cluster 1:
+    Size: 264 pixels
+    Cluster mass: 401.2
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 2.14 seconds
+    Mean t-statistic: 0.797
+    Peak t-statistic: 3.103
+    Effect direction: Speech > Music
+
+  Cluster 2:
+    Size: 234 pixels
+    Cluster mass: 339.1
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.89 seconds
+    Mean t-statistic: 0.893
+    Peak t-statistic: 3.103
+    Effect direction: Speech > Music
+
+
+Channel 12: PHR6
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 364.2
+
+  Cluster 1:
+    Size: 244 pixels
+    Cluster mass: 364.2
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.89 seconds
+    Mean t-statistic: 0.755
+    Peak t-statistic: 3.100
+    Effect direction: Speech > Music
+
+
+Channel 19: ATR8
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 367.2
+
+  Cluster 1:
+    Size: 235 pixels
+    Cluster mass: 367.2
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.95 seconds
+    Mean t-statistic: -0.151
+    Peak t-statistic: -5.644
+    Effect direction: Music > Speech
+
+
+Channel 34: SMR3
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 476.5
+
+  Cluster 1:
+    Size: 296 pixels
+    Cluster mass: 476.5
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 2.39 seconds
+    Mean t-statistic: -0.593
+    Peak t-statistic: -2.790
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 226 pixels
+    Cluster mass: 345.3
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 1.81 seconds
+    Mean t-statistic: -0.516
+    Peak t-statistic: -2.790
+    Effect direction: Music > Speech
+
+
+Channel 36: SMR7
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 415.7
+
+  Cluster 1:
+    Size: 297 pixels
+    Cluster mass: 415.7
+    Frequency range: 8.00 - 8.50 Hz
+    Time range: 0.00 - 2.33 seconds
+    Mean t-statistic: 0.126
+    Peak t-statistic: -4.155
+    Effect direction: Speech > Music
+
+
+CHANNELS WITHOUT SIGNIFICANT CLUSTERS
+--------------------------------------------------------------------------------
+  Channel 0: AIR1
+  Channel 1: AIR2
+  Channel 2: AIR3
+  Channel 3: AIR4
+  Channel 4: AR10
+  Channel 5: AR12
+  Channel 6: IPR1
+  Channel 7: IPR2
+  Channel 10: AHR10
+  Channel 13: PHR9
+  Channel 14: PHR10
+  Channel 15: PHR11
+  Channel 16: ATR5
+  Channel 17: ATR6
+  Channel 18: ATR7
+  Channel 20: COR1
+  Channel 21: COR4
+  Channel 22: COR5
+  Channel 23: COR6
+  Channel 24: COR7
+  Channel 25: COR8
+  Channel 26: PR1
+  Channel 27: PR2
+  Channel 28: PR3
+  Channel 29: PR4
+  Channel 30: PR5
+  Channel 31: PR6
+  Channel 32: PR7
+  Channel 33: PR8
+  Channel 35: SMR6
+  Channel 37: SMR9
+  Channel 38: SMR10
+
+STATISTICAL PARAMETERS
+================================================================================
+Precluster threshold (uncorrected): p < 0.05
+Precluster t-value: 2.201
+Cluster statistic type: mass (sum of absolute t-values)
+Number of permutations: 5000
+Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)

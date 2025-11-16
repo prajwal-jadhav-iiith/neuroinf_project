@@ -1,0 +1,621 @@
+================================================================================
+CLUSTER-BASED PERMUTATION TEST RESULTS
+Subject: sub-03
+================================================================================
+
+OVERALL SUMMARY
+--------------------------------------------------------------------------------
+Method: cluster-based (MNE standard)
+Total channels analyzed: 48
+Channels with significant clusters: 25
+Total significant clusters: 46
+Total significant pixels: 2130
+Percentage of all pixels: 0.77%
+
+EFFECT DIRECTION
+--------------------------------------------------------------------------------
+Significant pixels with positive t (Speech > Music): 76
+Significant pixels with negative t (Music > Speech): 2054
+
+INTERPRETATION: Music shows higher theta power than Speech
+
+DETAILED CLUSTER INFORMATION BY CHANNEL
+================================================================================
+
+Channel 1: F02
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 125.9
+
+  Cluster 1:
+    Size: 68 pixels
+    Cluster mass: 111.5
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.64 seconds
+    Mean t-statistic: -0.703
+    Peak t-statistic: -3.397
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 89 pixels
+    Cluster mass: 125.9
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.11 seconds
+    Mean t-statistic: -0.610
+    Peak t-statistic: -3.397
+    Effect direction: Music > Speech
+
+
+Channel 2: F03
+--------------------------------------------------------------------------------
+Number of significant clusters: 3
+Cluster threshold for this channel: 160.8
+
+  Cluster 1:
+    Size: 72 pixels
+    Cluster mass: 108.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.78 seconds
+    Mean t-statistic: -0.421
+    Peak t-statistic: -2.648
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 88 pixels
+    Cluster mass: 136.5
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.11 seconds
+    Mean t-statistic: -0.502
+    Peak t-statistic: -2.715
+    Effect direction: Music > Speech
+
+  Cluster 3:
+    Size: 114 pixels
+    Cluster mass: 160.8
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.81 seconds
+    Mean t-statistic: -0.911
+    Peak t-statistic: -2.938
+    Effect direction: Music > Speech
+
+
+Channel 3: F04
+--------------------------------------------------------------------------------
+Number of significant clusters: 3
+Cluster threshold for this channel: 149.9
+
+  Cluster 1:
+    Size: 72 pixels
+    Cluster mass: 123.4
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.83 seconds
+    Mean t-statistic: -0.456
+    Peak t-statistic: -2.298
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 102 pixels
+    Cluster mass: 148.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.39 seconds
+    Mean t-statistic: -0.338
+    Peak t-statistic: -2.632
+    Effect direction: Music > Speech
+
+  Cluster 3:
+    Size: 100 pixels
+    Cluster mass: 149.9
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.30 seconds
+    Mean t-statistic: -0.231
+    Peak t-statistic: -2.298
+    Effect direction: Music > Speech
+
+
+Channel 4: F05
+--------------------------------------------------------------------------------
+Number of significant clusters: 4
+Cluster threshold for this channel: 172.6
+
+  Cluster 1:
+    Size: 79 pixels
+    Cluster mass: 133.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.88 seconds
+    Mean t-statistic: -0.123
+    Peak t-statistic: -2.328
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 80 pixels
+    Cluster mass: 121.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.92 seconds
+    Mean t-statistic: -0.073
+    Peak t-statistic: -2.328
+    Effect direction: Music > Speech
+
+  Cluster 3:
+    Size: 92 pixels
+    Cluster mass: 172.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.39 seconds
+    Mean t-statistic: -0.230
+    Peak t-statistic: -2.328
+    Effect direction: Music > Speech
+
+  Cluster 4:
+    Size: 70 pixels
+    Cluster mass: 104.4
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.59 seconds
+    Mean t-statistic: -0.137
+    Peak t-statistic: -2.328
+    Effect direction: Music > Speech
+
+
+Channel 7: F09
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 92.5
+
+  Cluster 1:
+    Size: 54 pixels
+    Cluster mass: 92.5
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.27 seconds
+    Mean t-statistic: -0.598
+    Peak t-statistic: -2.145
+    Effect direction: Music > Speech
+
+
+Channel 10: F12
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 199.4
+
+  Cluster 1:
+    Size: 119 pixels
+    Cluster mass: 199.4
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.81 seconds
+    Mean t-statistic: -0.311
+    Peak t-statistic: -3.009
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 88 pixels
+    Cluster mass: 124.4
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.02 seconds
+    Mean t-statistic: 0.335
+    Peak t-statistic: 2.596
+    Effect direction: Speech > Music
+
+
+Channel 11: F13
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 142.6
+
+  Cluster 1:
+    Size: 75 pixels
+    Cluster mass: 93.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.78 seconds
+    Mean t-statistic: -0.119
+    Peak t-statistic: 2.539
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 103 pixels
+    Cluster mass: 142.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.44 seconds
+    Mean t-statistic: -0.165
+    Peak t-statistic: 2.539
+    Effect direction: Music > Speech
+
+
+Channel 16: F20
+--------------------------------------------------------------------------------
+Number of significant clusters: 4
+Cluster threshold for this channel: 196.9
+
+  Cluster 1:
+    Size: 80 pixels
+    Cluster mass: 150.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.92 seconds
+    Mean t-statistic: -0.019
+    Peak t-statistic: -2.924
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 85 pixels
+    Cluster mass: 140.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.06 seconds
+    Mean t-statistic: -0.017
+    Peak t-statistic: -2.924
+    Effect direction: Music > Speech
+
+  Cluster 3:
+    Size: 122 pixels
+    Cluster mass: 196.9
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.95 seconds
+    Mean t-statistic: -0.279
+    Peak t-statistic: -2.924
+    Effect direction: Music > Speech
+
+  Cluster 4:
+    Size: 60 pixels
+    Cluster mass: 112.5
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.36 seconds
+    Mean t-statistic: 0.192
+    Peak t-statistic: 1.738
+    Effect direction: Speech > Music
+
+
+Channel 17: F21
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 207.6
+
+  Cluster 1:
+    Size: 67 pixels
+    Cluster mass: 115.2
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.64 seconds
+    Mean t-statistic: 0.397
+    Peak t-statistic: 2.625
+    Effect direction: Speech > Music
+
+  Cluster 2:
+    Size: 137 pixels
+    Cluster mass: 207.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 3.28 seconds
+    Mean t-statistic: -0.078
+    Peak t-statistic: -3.454
+    Effect direction: Music > Speech
+
+
+Channel 20: F26
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 116.7
+
+  Cluster 1:
+    Size: 63 pixels
+    Cluster mass: 116.7
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.45 seconds
+    Mean t-statistic: -0.383
+    Peak t-statistic: -2.625
+    Effect direction: Music > Speech
+
+
+Channel 23: F29
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 94.2
+
+  Cluster 1:
+    Size: 59 pixels
+    Cluster mass: 94.2
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.41 seconds
+    Mean t-statistic: 0.724
+    Peak t-statistic: 3.525
+    Effect direction: Speech > Music
+
+
+Channel 27: F41
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 137.5
+
+  Cluster 1:
+    Size: 100 pixels
+    Cluster mass: 137.5
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.34 seconds
+    Mean t-statistic: -0.341
+    Peak t-statistic: 2.122
+    Effect direction: Music > Speech
+
+
+Channel 28: F42
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 127.1
+
+  Cluster 1:
+    Size: 72 pixels
+    Cluster mass: 127.1
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.78 seconds
+    Mean t-statistic: -0.289
+    Peak t-statistic: -2.541
+    Effect direction: Music > Speech
+
+
+Channel 29: C49
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 159.0
+
+  Cluster 1:
+    Size: 98 pixels
+    Cluster mass: 159.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.30 seconds
+    Mean t-statistic: 0.155
+    Peak t-statistic: 1.991
+    Effect direction: Speech > Music
+
+
+Channel 30: C50
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 113.0
+
+  Cluster 1:
+    Size: 48 pixels
+    Cluster mass: 113.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.17 seconds
+    Mean t-statistic: -0.399
+    Peak t-statistic: -3.033
+    Effect direction: Music > Speech
+
+
+Channel 32: C53
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 110.6
+
+  Cluster 1:
+    Size: 75 pixels
+    Cluster mass: 110.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.78 seconds
+    Mean t-statistic: -0.309
+    Peak t-statistic: -2.683
+    Effect direction: Music > Speech
+
+
+Channel 37: T04
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 103.7
+
+  Cluster 1:
+    Size: 68 pixels
+    Cluster mass: 103.7
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.59 seconds
+    Mean t-statistic: 0.018
+    Peak t-statistic: 2.657
+    Effect direction: Speech > Music
+
+
+Channel 38: T05
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 112.9
+
+  Cluster 1:
+    Size: 63 pixels
+    Cluster mass: 112.9
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.50 seconds
+    Mean t-statistic: 0.315
+    Peak t-statistic: 2.471
+    Effect direction: Speech > Music
+
+
+Channel 39: T06
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 103.0
+
+  Cluster 1:
+    Size: 67 pixels
+    Cluster mass: 103.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.64 seconds
+    Mean t-statistic: -0.199
+    Peak t-statistic: -1.646
+    Effect direction: Music > Speech
+
+
+Channel 40: T07
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 154.3
+
+  Cluster 1:
+    Size: 91 pixels
+    Cluster mass: 124.2
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.11 seconds
+    Mean t-statistic: -0.269
+    Peak t-statistic: 2.219
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 106 pixels
+    Cluster mass: 154.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.67 seconds
+    Mean t-statistic: -0.547
+    Peak t-statistic: -2.603
+    Effect direction: Music > Speech
+
+
+Channel 41: T12
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 304.4
+
+  Cluster 1:
+    Size: 195 pixels
+    Cluster mass: 304.4
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 4.78 seconds
+    Mean t-statistic: -0.305
+    Peak t-statistic: -2.543
+    Effect direction: Music > Speech
+
+
+Channel 42: T13
+--------------------------------------------------------------------------------
+Number of significant clusters: 4
+Cluster threshold for this channel: 189.0
+
+  Cluster 1:
+    Size: 126 pixels
+    Cluster mass: 189.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 3.05 seconds
+    Mean t-statistic: -0.336
+    Peak t-statistic: 3.428
+    Effect direction: Music > Speech
+
+  Cluster 2:
+    Size: 105 pixels
+    Cluster mass: 154.9
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.58 seconds
+    Mean t-statistic: -0.234
+    Peak t-statistic: 3.428
+    Effect direction: Music > Speech
+
+  Cluster 3:
+    Size: 109 pixels
+    Cluster mass: 153.2
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.58 seconds
+    Mean t-statistic: -0.205
+    Peak t-statistic: 3.428
+    Effect direction: Music > Speech
+
+  Cluster 4:
+    Size: 97 pixels
+    Cluster mass: 151.1
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.34 seconds
+    Mean t-statistic: -0.078
+    Peak t-statistic: 3.428
+    Effect direction: Music > Speech
+
+
+Channel 43: T14
+--------------------------------------------------------------------------------
+Number of significant clusters: 2
+Cluster threshold for this channel: 151.3
+
+  Cluster 1:
+    Size: 106 pixels
+    Cluster mass: 151.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.48 seconds
+    Mean t-statistic: 0.273
+    Peak t-statistic: 2.495
+    Effect direction: Speech > Music
+
+  Cluster 2:
+    Size: 95 pixels
+    Cluster mass: 144.1
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.30 seconds
+    Mean t-statistic: 0.452
+    Peak t-statistic: 2.495
+    Effect direction: Speech > Music
+
+
+Channel 44: sT8
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 145.7
+
+  Cluster 1:
+    Size: 97 pixels
+    Cluster mass: 145.7
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.25 seconds
+    Mean t-statistic: 0.359
+    Peak t-statistic: -2.081
+    Effect direction: Speech > Music
+
+
+Channel 47: HF3
+--------------------------------------------------------------------------------
+Number of significant clusters: 3
+Cluster threshold for this channel: 124.5
+
+  Cluster 1:
+    Size: 77 pixels
+    Cluster mass: 124.5
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.88 seconds
+    Mean t-statistic: 0.118
+    Peak t-statistic: -1.980
+    Effect direction: Speech > Music
+
+  Cluster 2:
+    Size: 76 pixels
+    Cluster mass: 100.9
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.78 seconds
+    Mean t-statistic: 0.050
+    Peak t-statistic: -1.980
+    Effect direction: Speech > Music
+
+  Cluster 3:
+    Size: 68 pixels
+    Cluster mass: 105.8
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.64 seconds
+    Mean t-statistic: -0.035
+    Peak t-statistic: -1.980
+    Effect direction: Music > Speech
+
+
+CHANNELS WITHOUT SIGNIFICANT CLUSTERS
+--------------------------------------------------------------------------------
+  Channel 0: F01
+  Channel 5: F06
+  Channel 6: F07
+  Channel 8: F10
+  Channel 9: F11
+  Channel 12: F14
+  Channel 13: F17
+  Channel 14: F18
+  Channel 15: F19
+  Channel 18: F22
+  Channel 19: F25
+  Channel 21: F27
+  Channel 22: F28
+  Channel 24: F33
+  Channel 25: F34
+  Channel 26: F35
+  Channel 31: C51
+  Channel 33: C54
+  Channel 34: C60
+  Channel 35: C61
+  Channel 36: C62
+  Channel 45: HF1
+  Channel 46: HF2
+
+STATISTICAL PARAMETERS
+================================================================================
+Precluster threshold (uncorrected): p < 0.05
+Precluster t-value: 2.201
+Cluster statistic type: mass (sum of absolute t-values)
+Number of permutations: 5000
+Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)

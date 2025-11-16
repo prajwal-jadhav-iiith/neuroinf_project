@@ -1,0 +1,42 @@
+================================================================================
+CLUSTER-BASED PERMUTATION TEST RESULTS
+Subject: sub-07
+================================================================================
+
+OVERALL SUMMARY
+--------------------------------------------------------------------------------
+Method: cluster-based (MNE standard)
+Total channels analyzed: 8
+Channels with significant clusters: 0
+Total significant clusters: 0
+Total significant pixels: 0
+Percentage of all pixels: 0.00%
+
+EFFECT DIRECTION
+--------------------------------------------------------------------------------
+Significant pixels with positive t (Speech > Music): 0
+Significant pixels with negative t (Music > Speech): 0
+
+INTERPRETATION: Mixed effects (both directions present)
+
+DETAILED CLUSTER INFORMATION BY CHANNEL
+================================================================================
+
+CHANNELS WITHOUT SIGNIFICANT CLUSTERS
+--------------------------------------------------------------------------------
+  Channel 0: FB4
+  Channel 1: FB5
+  Channel 2: FB6
+  Channel 3: FB7
+  Channel 4: FB8
+  Channel 5: Fp15
+  Channel 6: C01
+  Channel 7: C02
+
+STATISTICAL PARAMETERS
+================================================================================
+Precluster threshold (uncorrected): p < 0.05
+Precluster t-value: 2.201
+Cluster statistic type: mass (sum of absolute t-values)
+Number of permutations: 5000
+Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)

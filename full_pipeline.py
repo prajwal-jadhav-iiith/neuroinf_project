@@ -12,6 +12,49 @@ import time
 import traceback
 
 # =============================================================================
+# FREQUENCY BAND CONFIGURATION
+# =============================================================================
+
+def get_band_config(band_name):
+    """
+    Get frequency band configuration
+
+    Parameters:
+    -----------
+    band_name : str
+        Name of frequency band ('theta' or 'alpha')
+
+    Returns:
+    --------
+    config : dict
+        Dictionary containing:
+        - 'freqs': np.ndarray of frequencies
+        - 'name': str, band name
+        - 'range_str': str, frequency range for display
+        - 'output_dir': str, output directory name
+    """
+    bands = {
+        'theta': {
+            'freqs': np.arange(4, 8.5, 0.5),  # 4.0-8.0 Hz
+            'name': 'theta',
+            'range_str': '4-8 Hz',
+            'output_dir': 'results_theta'
+        },
+        'alpha': {
+            'freqs': np.arange(8, 12.5, 0.5),  # 8.0-12.0 Hz
+            'name': 'alpha',
+            'range_str': '8-12 Hz',
+            'output_dir': 'results_alpha'
+        }
+    }
+
+    if band_name not in bands:
+        raise ValueError(f"Unknown band '{band_name}'. Choose from: {list(bands.keys())}")
+
+    return bands[band_name]
+
+
+# =============================================================================
 # DATA LOADING AND PREPROCESSING FUNCTIONS
 # =============================================================================
 
@@ -1023,7 +1066,7 @@ def plot_ica_comparison(raw_before, raw_after, ica, channel_names, subject_id,
 
 def create_preprocessing_qc_plots(raw_after_ica, raw_after_notch, raw_after_bandpass,
                                    raw_after_car, epochs, power_speech, power_music,
-                                   channel_names, subject_id, save_dir='./preprocessing_qc'):
+                                   channel_names, subject_id, save_dir='./preprocessing_qc', band_config=None):
     """
     Create comprehensive quality control visualizations for all preprocessing steps
 
@@ -1056,6 +1099,10 @@ def create_preprocessing_qc_plots(raw_after_ica, raw_after_notch, raw_after_band
 
     os.makedirs(save_dir, exist_ok=True)
     print(f"\n  Creating preprocessing QC visualizations...")
+
+    # Use default theta band if no config provided
+    if band_config is None:
+        band_config = get_band_config('theta')
 
     # Select representative channels for visualization (up to 6)
     n_viz_channels = min(6, len(channel_names))
@@ -1329,7 +1376,7 @@ def create_preprocessing_qc_plots(raw_after_ica, raw_after_notch, raw_after_band
         ax_music.set_title(f'Music: {channel_names[ch_idx_tf]}', fontsize=11, fontweight='bold')
         plt.colorbar(im, ax=ax_music, label='Power')
 
-    plt.suptitle(f'{subject_id}: Time-Frequency Analysis Examples (Theta Band 4-8 Hz)',
+    plt.suptitle(f'{subject_id}: Time-Frequency Analysis Examples ({band_config["name"].title()} Band {band_config["range_str"]})',
                  fontsize=14, fontweight='bold')
     plt.tight_layout()
 
@@ -1343,7 +1390,7 @@ def create_preprocessing_qc_plots(raw_after_ica, raw_after_notch, raw_after_band
 
 
 def plot_tf_results(results, channel_names, freqs, times, subject_id,
-                    save_dir='.', show_plots=False):
+                    save_dir='.', show_plots=False, band_config=None):
     """
     Visualize time-frequency results
 
@@ -1363,7 +1410,13 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
         Directory to save figures
     show_plots : bool
         Whether to display plots
+    band_config : dict or None
+        Band configuration dict from get_band_config()
     """
+    # Use default theta band if no config provided
+    if band_config is None:
+        band_config = get_band_config('theta')
+
     os.makedirs(save_dir, exist_ok=True)
 
     n_channels = len(channel_names)
@@ -1373,7 +1426,7 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
     if n_channels == 1:
         axes = axes.reshape(1, -1)
 
-    fig.suptitle(f'{subject_id} - All Channels - {results["method"]}',
+    fig.suptitle(f'{subject_id} - All Channels - {results["method"]} ({band_config["name"].title()} Band {band_config["range_str"]})',
                 fontsize=14, fontweight='bold')
 
     for ch_idx in range(n_channels):
@@ -1419,7 +1472,7 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
 
 
 def generate_cluster_report(results, channel_names, freqs, times,
-                           subject_id, save_path=None):
+                           subject_id, save_path=None, band_config=None):
     """
     Generate detailed text report of significant clusters
 
@@ -1433,7 +1486,13 @@ def generate_cluster_report(results, channel_names, freqs, times,
     subject_id : str
     save_path : str or None
         If provided, save report to file
+    band_config : dict or None
+        Band configuration dict from get_band_config()
     """
+    # Use default theta band if no config provided
+    if band_config is None:
+        band_config = get_band_config('theta')
+
     report_lines = []
 
     # Header
@@ -1469,9 +1528,9 @@ def generate_cluster_report(results, channel_names, freqs, times,
     report_lines.append("")
 
     if n_negative > n_positive:
-        report_lines.append("INTERPRETATION: Music shows higher theta power than Speech")
+        report_lines.append(f"INTERPRETATION: Music shows higher {band_config['name']} power than Speech")
     elif n_positive > n_negative:
-        report_lines.append("INTERPRETATION: Speech shows higher theta power than Music")
+        report_lines.append(f"INTERPRETATION: Speech shows higher {band_config['name']} power than Music")
     else:
         report_lines.append("INTERPRETATION: Mixed effects (both directions present)")
     report_lines.append("")
@@ -1664,7 +1723,7 @@ def verify_two_tailed_test(results):
         if np.sum(sig_t_values < 0) > np.sum(sig_t_values > 0):
             print("  [OK] Two-tailed test is working correctly")
             print("  [OK] Majority of significant effects show Music > Speech")
-            print("  [OK] This suggests a real, unidirectional effect in theta band")
+            print(f"  [OK] This suggests a real, unidirectional effect in {band_config['name']} band")
         else:
             print("  [OK] Two-tailed test is working correctly")
             print("  [OK] Significant effects in both directions detected")
@@ -1677,7 +1736,7 @@ def verify_two_tailed_test(results):
 # =============================================================================
 
 def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrode_results',
-                         output_base_dir='./results_theta', save_preprocessed=True):
+                         output_base_dir='./results_theta', save_preprocessed=True, band_config=None):
     """
     Run the complete analysis pipeline for a single subject
 
@@ -1692,15 +1751,21 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
     output_base_dir : str
         Base directory for output files
     save_preprocessed : bool
-        Whether to save preprocessed theta power data for group analysis
+        Whether to save preprocessed power data for group analysis
+    band_config : dict or None
+        Frequency band configuration from get_band_config(). If None, uses default theta band.
 
     Returns:
     --------
     success : bool
         True if analysis completed successfully, False otherwise
     """
+    # Use default theta band if no config provided
+    if band_config is None:
+        band_config = get_band_config('theta')
+
     print("\n" + "="*80)
-    print(f"PROCESSING {subject_id}")
+    print(f"PROCESSING {subject_id} - {band_config['name'].upper()} BAND ({band_config['range_str']})")
     print("="*80)
 
     try:
@@ -1845,23 +1910,64 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
         print(f"  Music epochs: {len(epochs['music'])}")
 
         # 11. Time-frequency analysis
-        print(f"\n[11/15] Computing time-frequency representation...")
-        freqs = np.arange(4, 8.5, 0.5)
+        print(f"\n[11/15] Computing time-frequency representation ({band_config['range_str']})...")
+        freqs = band_config['freqs']
         n_cycles = freqs / 2
 
-        # Optimized: decim=24 provides 41.7 Hz sampling (sufficient for theta 4-8Hz, Nyquist theorem)
-        # This reduces computation time while maintaining statistical accuracy
+        # Dynamic decimation based on raw sampling rate
+        # Subjects have varying sampling rates: 512 Hz, 1024 Hz, or 2000 Hz
+        # Target: 64 Hz output (provides 32 Hz Nyquist, safe for both alpha and theta bands)
+        # Required: Alpha (8-12 Hz) needs >24 Hz Nyquist; Theta (4-8 Hz) needs >16 Hz Nyquist
+        raw_sfreq = epochs.info['sfreq']
+        target_sfreq = 64.0  # Target sampling rate for consistent output
+        decim = int(np.round(raw_sfreq / target_sfreq))
+        expected_output_sfreq = raw_sfreq / decim
+
+        print(f"  Raw sampling rate: {raw_sfreq:.2f} Hz")
+        print(f"  Target output rate: {target_sfreq:.2f} Hz")
+        print(f"  Calculated decim factor: {decim}")
+        print(f"  Expected output rate: {expected_output_sfreq:.2f} Hz (Nyquist: {expected_output_sfreq/2:.2f} Hz)")
+
         power_speech = mne.time_frequency.tfr_morlet(
             epochs['speech'], freqs=freqs, n_cycles=n_cycles, use_fft=True,
-            return_itc=False, average=False, verbose=False, decim=24
+            return_itc=False, average=False, verbose=False, decim=decim
         )
         power_music = mne.time_frequency.tfr_morlet(
             epochs['music'], freqs=freqs, n_cycles=n_cycles, use_fft=True,
-            return_itc=False, average=False, verbose=False, decim=24
+            return_itc=False, average=False, verbose=False, decim=decim
         )
 
         print(f"  Speech power shape: {power_speech.data.shape}")
         print(f"  Music power shape: {power_music.data.shape}")
+
+        # Validate Nyquist criterion for the selected band
+        actual_sfreq = power_speech.sfreq
+        nyquist_freq = actual_sfreq / 2
+        max_band_freq = band_config['freqs'].max()
+        required_nyquist = max_band_freq * 2
+
+        print(f"\n  Nyquist Validation:")
+        print(f"    Actual output sampling rate: {actual_sfreq:.2f} Hz")
+        print(f"    Nyquist frequency: {nyquist_freq:.2f} Hz")
+        print(f"    Max {band_config['name']} band frequency: {max_band_freq:.2f} Hz")
+        print(f"    Required minimum Nyquist: {required_nyquist:.2f} Hz")
+
+        if nyquist_freq < required_nyquist:
+            raise ValueError(
+                f"\n{'='*80}\n"
+                f"NYQUIST VIOLATION DETECTED!\n"
+                f"{'='*80}\n"
+                f"Raw sampling rate: {raw_sfreq:.2f} Hz\n"
+                f"Decimation factor: {decim}\n"
+                f"Output sampling rate: {actual_sfreq:.2f} Hz (Nyquist: {nyquist_freq:.2f} Hz)\n"
+                f"Band: {band_config['name']} (max freq: {max_band_freq:.2f} Hz)\n"
+                f"Required Nyquist: >{required_nyquist:.2f} Hz\n\n"
+                f"Solution: Increase target_sfreq to at least {required_nyquist * 2:.0f} Hz\n"
+                f"{'='*80}"
+            )
+        else:
+            margin = nyquist_freq - required_nyquist
+            print(f"    [OK] Nyquist criterion satisfied! (margin: {margin:.2f} Hz)")
 
         # 11b. Create preprocessing quality control visualizations
         print(f"\n[11b/15] Creating preprocessing quality control visualizations...")
@@ -1876,20 +1982,21 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
             power_music=power_music,
             channel_names=ieeg_channels,
             subject_id=subject_id,
-            save_dir=qc_dir
+            save_dir=qc_dir,
+            band_config=band_config
         )
 
-        # 12. Save preprocessed theta power data for group analysis
+        # 12. Save preprocessed power data for group analysis
         if save_preprocessed:
-            print(f"\n[12/15] Saving preprocessed theta power data...")
+            print(f"\n[12/15] Saving preprocessed {band_config['name']} power data...")
             preprocessed_dir = os.path.join(output_base_dir, 'preprocessed_data')
             os.makedirs(preprocessed_dir, exist_ok=True)
 
-            # Average theta power across trials for each condition
+            # Average power across trials for each condition
             speech_theta_avg = power_speech.data.mean(axis=0)  # Average across trials: (n_channels, n_freqs, n_times)
             music_theta_avg = power_music.data.mean(axis=0)
 
-            # Average across frequency band (theta = 4-8 Hz)
+            # Average across frequency band ({band_config['name']} = {band_config['range_str']})
             speech_theta_power = speech_theta_avg.mean(axis=1)  # (n_channels, n_times)
             music_theta_power = music_theta_avg.mean(axis=1)
 
@@ -1929,15 +2036,17 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
                 save_times = current_times
 
             # Save as .npz file with metadata
-            save_path = os.path.join(preprocessed_dir, f'{subject_id}_theta_power.npz')
+            band_name = band_config['name']
+            save_path = os.path.join(preprocessed_dir, f'{subject_id}_{band_name}_power.npz')
             np.savez(
                 save_path,
-                speech_theta_power=speech_theta_power,
-                music_theta_power=music_theta_power,
+                **{f'speech_{band_name}_power': speech_theta_power},
+                **{f'music_{band_name}_power': music_theta_power},
                 channel_names=np.array(ieeg_channels),
                 times=save_times,
                 freqs=power_speech.freqs,
-                subject_id=subject_id
+                subject_id=subject_id,
+                band_name=band_name
             )
             print(f"  Saved to: {save_path}")
             print(f"  Final shape: {speech_theta_power.shape} (channels × timepoints)")
@@ -1977,7 +2086,8 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
             times=power_speech.times,  # Use decimated times from TFR directly
             subject_id=subject_id,
             save_dir=subject_output_dir,
-            show_plots=False
+            show_plots=False,
+            band_config=band_config
         )
 
         # 15. Generate report and summary
@@ -1989,7 +2099,8 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
             freqs=power_speech.freqs,
             times=power_speech.times,  # Use decimated times from TFR directly
             subject_id=subject_id,
-            save_path=report_path
+            save_path=report_path,
+            band_config=band_config
         )
 
         # Create summary table
@@ -2025,7 +2136,7 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
 # CHECKPOINT AND RESUME FUNCTIONS
 # =============================================================================
 
-def is_subject_completed(subject_id, output_base_dir):
+def is_subject_completed(subject_id, output_base_dir, band_name='theta'):
     """
     Check if a subject has already been processed successfully
 
@@ -2035,6 +2146,8 @@ def is_subject_completed(subject_id, output_base_dir):
         Subject identifier (e.g., 'sub-05')
     output_base_dir : str
         Base directory for output files
+    band_name : str
+        Frequency band name ('theta' or 'alpha')
 
     Returns:
     --------
@@ -2043,7 +2156,7 @@ def is_subject_completed(subject_id, output_base_dir):
     """
     # Check for critical output files
     preprocessed_dir = Path(output_base_dir) / 'preprocessed_data'
-    theta_power_file = preprocessed_dir / f'{subject_id}_theta_power.npz'
+    power_file = preprocessed_dir / f'{subject_id}_{band_name}_power.npz'
     roi_mapping_file = preprocessed_dir / f'{subject_id}_roi_mapping.csv'
 
     subject_output_dir = Path(output_base_dir) / subject_id
@@ -2051,14 +2164,14 @@ def is_subject_completed(subject_id, output_base_dir):
     cluster_report = subject_output_dir / f'{subject_id}_cluster_report.txt'
 
     # All critical files must exist for subject to be considered complete
-    critical_files = [theta_power_file, summary_plot, cluster_report]
+    critical_files = [power_file, summary_plot, cluster_report]
 
     all_exist = all(f.exists() for f in critical_files)
 
     return all_exist
 
 
-def get_processing_status(subjects, output_base_dir):
+def get_processing_status(subjects, output_base_dir, band_name='theta'):
     """
     Get processing status for all subjects
 
@@ -2068,6 +2181,8 @@ def get_processing_status(subjects, output_base_dir):
         List of subject IDs
     output_base_dir : str
         Base directory for output files
+    band_name : str
+        Frequency band name ('theta' or 'alpha')
 
     Returns:
     --------
@@ -2080,7 +2195,7 @@ def get_processing_status(subjects, output_base_dir):
     incomplete = []
 
     for subject_id in subjects:
-        if is_subject_completed(subject_id, output_base_dir):
+        if is_subject_completed(subject_id, output_base_dir, band_name):
             completed.append(subject_id)
         else:
             incomplete.append(subject_id)
@@ -2140,6 +2255,13 @@ Examples:
         help="Comma-separated list of subjects to process (e.g., sub-01,sub-05). If not specified, processes all subjects."
     )
     parser.add_argument(
+        "--band",
+        type=str,
+        choices=['theta', 'alpha'],
+        default='theta',
+        help="Frequency band to analyze: 'theta' (4-8 Hz) or 'alpha' (8-12 Hz). Default: theta"
+    )
+    parser.add_argument(
         "--force-reprocess",
         action="store_true",
         help="Force reprocessing of all subjects, even if they are already completed"
@@ -2151,6 +2273,13 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # Get frequency band configuration
+    band_config = get_band_config(args.band)
+
+    # Update output directory based on band if not explicitly provided
+    if args.output_dir == "./results_theta":  # User didn't override default
+        args.output_dir = f"./{band_config['output_dir']}"
 
     # Configuration
     DATA_DIR = args.data_dir
@@ -2202,7 +2331,7 @@ Examples:
     print("CHECKING PROCESSING STATUS")
     print(f"{'='*80}")
 
-    completed_subjects, incomplete_subjects = get_processing_status(all_subjects, OUTPUT_DIR)
+    completed_subjects, incomplete_subjects = get_processing_status(all_subjects, OUTPUT_DIR, band_config['name'])
 
     print(f"\nProcessing status:")
     print(f"  [OK] Completed: {len(completed_subjects)}/{len(all_subjects)}")
@@ -2271,7 +2400,8 @@ Examples:
             data_dir=DATA_DIR,
             electrode_results_dir=ELECTRODE_RESULTS_DIR,
             output_base_dir=OUTPUT_DIR,
-            save_preprocessed=True
+            save_preprocessed=True,
+            band_config=band_config
         )
 
         if success:

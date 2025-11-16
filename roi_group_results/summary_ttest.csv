@@ -1,0 +1,9 @@
+roi,n_subjects,total_electrodes,avg_electrodes_per_subject,n_significant_timepoints,proportion_significant,max_t_value
+ctx-lh-inferiorparietal,1,1,1.0,0,0.0,
+ctx-lh-middletemporal,1,9,9.0,0,0.0,
+ctx-lh-parsopercularis,1,5,5.0,0,0.0,
+ctx-lh-parstriangularis,1,4,4.0,0,0.0,
+ctx-lh-postcentral,1,7,7.0,0,0.0,
+ctx-lh-precentral,1,5,5.0,0,0.0,
+ctx-lh-superiortemporal,1,16,16.0,0,0.0,
+ctx-lh-supramarginal,1,2,2.0,0,0.0,

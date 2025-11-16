@@ -1,0 +1,146 @@
+================================================================================
+CLUSTER-BASED PERMUTATION TEST RESULTS
+Subject: sub-13
+================================================================================
+
+OVERALL SUMMARY
+--------------------------------------------------------------------------------
+Method: cluster-based (MNE standard)
+Total channels analyzed: 42
+Channels with significant clusters: 5
+Total significant clusters: 5
+Total significant pixels: 192
+Percentage of all pixels: 0.08%
+
+EFFECT DIRECTION
+--------------------------------------------------------------------------------
+Significant pixels with positive t (Speech > Music): 192
+Significant pixels with negative t (Music > Speech): 0
+
+INTERPRETATION: Speech shows higher theta power than Music
+
+DETAILED CLUSTER INFORMATION BY CHANNEL
+================================================================================
+
+Channel 15: P35
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 127.8
+
+  Cluster 1:
+    Size: 83 pixels
+    Cluster mass: 127.8
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.92 seconds
+    Mean t-statistic: -0.344
+    Peak t-statistic: 2.036
+    Effect direction: Music > Speech
+
+
+Channel 18: P38
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 114.6
+
+  Cluster 1:
+    Size: 78 pixels
+    Cluster mass: 114.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.78 seconds
+    Mean t-statistic: -0.310
+    Peak t-statistic: -2.970
+    Effect direction: Music > Speech
+
+
+Channel 23: P45
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 105.2
+
+  Cluster 1:
+    Size: 64 pixels
+    Cluster mass: 105.2
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.50 seconds
+    Mean t-statistic: -0.385
+    Peak t-statistic: -2.538
+    Effect direction: Music > Speech
+
+
+Channel 26: P48
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 146.6
+
+  Cluster 1:
+    Size: 90 pixels
+    Cluster mass: 146.6
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 2.25 seconds
+    Mean t-statistic: 0.240
+    Peak t-statistic: 2.214
+    Effect direction: Speech > Music
+
+
+Channel 37: P62
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 118.3
+
+  Cluster 1:
+    Size: 58 pixels
+    Cluster mass: 118.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.31 seconds
+    Mean t-statistic: -0.721
+    Peak t-statistic: -2.582
+    Effect direction: Music > Speech
+
+
+CHANNELS WITHOUT SIGNIFICANT CLUSTERS
+--------------------------------------------------------------------------------
+  Channel 0: P04
+  Channel 1: P05
+  Channel 2: P12
+  Channel 3: P13
+  Channel 4: P14
+  Channel 5: P19
+  Channel 6: P20
+  Channel 7: P21
+  Channel 8: P22
+  Channel 9: P23
+  Channel 10: P27
+  Channel 11: P28
+  Channel 12: P29
+  Channel 13: P30
+  Channel 14: P31
+  Channel 16: P36
+  Channel 17: P37
+  Channel 19: P39
+  Channel 20: P40
+  Channel 21: P43
+  Channel 22: P44
+  Channel 24: P46
+  Channel 25: P47
+  Channel 27: P50
+  Channel 28: P51
+  Channel 29: P52
+  Channel 30: P53
+  Channel 31: P54
+  Channel 32: P55
+  Channel 33: P56
+  Channel 34: P59
+  Channel 35: P60
+  Channel 36: P61
+  Channel 38: P63
+  Channel 39: P64
+  Channel 40: sT1
+  Channel 41: sT8
+
+STATISTICAL PARAMETERS
+================================================================================
+Precluster threshold (uncorrected): p < 0.05
+Precluster t-value: 2.201
+Cluster statistic type: mass (sum of absolute t-values)
+Number of permutations: 5000
+Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)
