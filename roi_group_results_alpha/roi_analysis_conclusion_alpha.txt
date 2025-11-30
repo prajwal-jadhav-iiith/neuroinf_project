@@ -1,0 +1,43 @@
+
+================================================================================
+ROI GROUP ANALYSIS SUMMARY: ALPHA BAND
+================================================================================
+
+OVERALL RESULTS:
+--------------------------------------------------------------------------------
+• Total ROIs analyzed: 17
+• ROIs with significant effects: 2 (11.8%)
+• ROIs without significant effects: 15
+
+SIGNIFICANT ROIs BY ANATOMICAL REGION:
+--------------------------------------------------------------------------------
+
+Temporal Cortex (2 ROIs):
+  • ctx-lh-superiortemporal (n=14): 4 clusters - Music > Speech
+  • ctx-lh-middletemporal (n=13): 1 clusters - Music > Speech
+
+ANATOMICAL INTERPRETATION:
+--------------------------------------------------------------------------------
+
+• TEMPORAL REGIONS (2 ROIs):
+  - Function: Auditory processing, speech perception, music processing
+  - Finding: Differential alpha power suggests condition-specific auditory encoding
+  - Alpha interpretation: Attentional gating and inhibitory control in auditory cortex
+
+GROUP-LEVEL CONCLUSION:
+--------------------------------------------------------------------------------
+• 2 ROIs show significant speech vs. music differences in alpha band
+• PREDOMINANT PATTERN: Music > Speech (2/2 ROIs)
+• Music stimuli elicit stronger alpha oscillations in perisylvian cortex
+• This suggests enhanced neural engagement for musical vs. speech stimuli
+
+RECOMMENDATIONS:
+--------------------------------------------------------------------------------
+• Examine individual ROI plots in: roi_group_results_alpha
+• Check summary CSV for detailed statistics
+• Consider follow-up analyses:
+  - Connectivity analysis between significant ROIs
+  - Single-trial variability in high-effect ROIs
+  - Cross-frequency coupling (if multiple bands analyzed)
+
+================================================================================

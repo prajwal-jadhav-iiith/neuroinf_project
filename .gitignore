@@ -6,5 +6,7 @@ nul
 .c*
 *.md
 test_pipeline_output/*
-__pycache__/*
+__pycache__/
 *.npz
+*.pdf
+*.bib

@@ -7,15 +7,15 @@ OVERALL SUMMARY
 --------------------------------------------------------------------------------
 Method: cluster-based (MNE standard)
 Total channels analyzed: 45
-Channels with significant clusters: 3
-Total significant clusters: 3
-Total significant pixels: 448
-Percentage of all pixels: 0.04%
+Channels with significant clusters: 4
+Total significant clusters: 4
+Total significant pixels: 458
+Percentage of all pixels: 0.06%
 
 EFFECT DIRECTION
 --------------------------------------------------------------------------------
-Significant pixels with positive t (Speech > Music): 324
-Significant pixels with negative t (Music > Speech): 124
+Significant pixels with positive t (Speech > Music): 365
+Significant pixels with negative t (Music > Speech): 93
 
 INTERPRETATION: Speech shows higher theta power than Music
 
@@ -25,14 +25,14 @@ DETAILED CLUSTER INFORMATION BY CHANNEL
 Channel 2: AIL3
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 520.4
+Cluster threshold for this channel: 396.9
 
   Cluster 1:
-    Size: 328 pixels
-    Cluster mass: 520.4
+    Size: 252 pixels
+    Cluster mass: 396.9
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.10 seconds
-    Mean t-statistic: 0.339
+    Time range: 0.00 - 2.14 seconds
+    Mean t-statistic: 0.338
     Peak t-statistic: 2.404
     Effect direction: Speech > Music
 
@@ -40,31 +40,46 @@ Cluster threshold for this channel: 520.4
 Channel 35: IPR1
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 431.4
+Cluster threshold for this channel: 327.9
 
   Cluster 1:
-    Size: 275 pixels
-    Cluster mass: 431.4
+    Size: 210 pixels
+    Cluster mass: 327.9
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 1.68 seconds
-    Mean t-statistic: -0.110
-    Peak t-statistic: 2.383
+    Time range: 0.00 - 1.70 seconds
+    Mean t-statistic: -0.074
+    Peak t-statistic: 2.381
     Effect direction: Music > Speech
 
 
 Channel 37: IPR3
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 343.8
+Cluster threshold for this channel: 257.8
 
   Cluster 1:
-    Size: 230 pixels
-    Cluster mass: 343.8
+    Size: 173 pixels
+    Cluster mass: 257.8
     Frequency range: 4.00 - 4.50 Hz
     Time range: 0.00 - 1.44 seconds
-    Mean t-statistic: 0.537
-    Peak t-statistic: 2.320
+    Mean t-statistic: 0.539
+    Peak t-statistic: 2.325
     Effect direction: Speech > Music
+
+
+Channel 38: IPR8
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 314.0
+
+  Cluster 1:
+    Size: 234 pixels
+    Cluster mass: 314.0
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.81 seconds
+    Mean t-statistic: -0.315
+    Peak t-statistic: 2.379
+    Effect direction: Music > Speech
 
 
 CHANNELS WITHOUT SIGNIFICANT CLUSTERS
@@ -104,7 +119,6 @@ CHANNELS WITHOUT SIGNIFICANT CLUSTERS
   Channel 33: PHL9
   Channel 34: PHL12
   Channel 36: IPR2
-  Channel 38: IPR8
   Channel 39: PCR13
   Channel 40: PCR14
   Channel 41: PCR15

@@ -1675,6 +1675,306 @@ def create_summary_table(results, channel_names):
     return df
 
 
+def generate_analysis_conclusion(cluster_results, summary_df, subject_id, band_config, save_path=None):
+    """
+    Generate high-level summary and interpretation of cluster analysis results
+
+    Parameters:
+    -----------
+    cluster_results : dict
+        Results from cluster-based permutation test
+    summary_df : pd.DataFrame
+        Summary table of significant clusters
+    subject_id : str
+        Subject identifier
+    band_config : dict
+        Band configuration (name, range_str)
+    save_path : str or None
+        Optional path to save conclusion text
+
+    Returns:
+    --------
+    conclusion_text : str
+        Formatted conclusion text
+    """
+    conclusion_lines = []
+
+    # Header
+    conclusion_lines.append("\n" + "="*80)
+    conclusion_lines.append(f"ANALYSIS CONCLUSION: {subject_id} - {band_config['name'].upper()} BAND ({band_config['range_str']})")
+    conclusion_lines.append("="*80)
+    conclusion_lines.append("")
+
+    # Basic statistics
+    n_total_channels = len(cluster_results['observed_t_maps'])
+    n_sig_channels = len(set(c['channel'] for c in cluster_results['significant_clusters']))
+    n_total_clusters = cluster_results['n_significant_clusters']
+    n_sig_pixels = cluster_results['n_significant_pixels']
+    total_pixels = cluster_results['significant_mask'].size
+    percent_sig = 100 * n_sig_pixels / total_pixels
+
+    conclusion_lines.append("OVERALL FINDINGS:")
+    conclusion_lines.append("-" * 80)
+
+    if n_total_clusters == 0:
+        conclusion_lines.append(f"• No significant differences found between Speech and Music conditions")
+        conclusion_lines.append(f"• Tested: {n_total_channels} channels in perisylvian regions")
+        conclusion_lines.append(f"• Interpretation: {band_config['name'].capitalize()} power ({band_config['range_str']}) shows")
+        conclusion_lines.append(f"  similar responses to speech and music stimuli in this subject")
+    else:
+        conclusion_lines.append(f"• Found {n_total_clusters} significant clusters across {n_sig_channels}/{n_total_channels} channels")
+        conclusion_lines.append(f"• {percent_sig:.2f}% of time-frequency points show significant differences")
+
+        # Effect direction analysis
+        if len(summary_df) > 0:
+            n_speech_greater = len(summary_df[summary_df['Effect_Direction'] == 'Speech > Music'])
+            n_music_greater = len(summary_df[summary_df['Effect_Direction'] == 'Music > Speech'])
+
+            conclusion_lines.append(f"• Effect directions:")
+            conclusion_lines.append(f"  - Speech > Music: {n_speech_greater} clusters")
+            conclusion_lines.append(f"  - Music > Speech: {n_music_greater} clusters")
+
+            # Determine predominant pattern
+            if n_music_greater > n_speech_greater * 1.5:
+                conclusion_lines.append("")
+                conclusion_lines.append("PRIMARY FINDING:")
+                conclusion_lines.append(f"• Music stimuli elicit stronger {band_config['name']} power than speech")
+                conclusion_lines.append(f"• This suggests enhanced neural oscillatory activity in response to music")
+            elif n_speech_greater > n_music_greater * 1.5:
+                conclusion_lines.append("")
+                conclusion_lines.append("PRIMARY FINDING:")
+                conclusion_lines.append(f"• Speech stimuli elicit stronger {band_config['name']} power than music")
+                conclusion_lines.append(f"• This suggests enhanced neural oscillatory activity in response to speech")
+            else:
+                conclusion_lines.append("")
+                conclusion_lines.append("PRIMARY FINDING:")
+                conclusion_lines.append(f"• Mixed effects: Both speech and music show condition-specific {band_config['name']} power")
+                conclusion_lines.append(f"• This suggests distinct but comparable neural processing for both stimuli")
+
+            # Top channels analysis
+            conclusion_lines.append("")
+            conclusion_lines.append("STRONGEST EFFECTS (Top 3 Channels):")
+            conclusion_lines.append("-" * 80)
+
+            top_n = min(3, len(summary_df))
+            for idx, row in summary_df.head(top_n).iterrows():
+                conclusion_lines.append(f"{idx+1}. {row['Channel']}: {row['Effect_Direction']}")
+                conclusion_lines.append(f"   Mean t-statistic: {row['Mean_T']:.2f}, Cluster size: {row['Cluster_Size']} pixels")
+
+    conclusion_lines.append("")
+    conclusion_lines.append("INTERPRETATION:")
+    conclusion_lines.append("-" * 80)
+
+    if band_config['name'] == 'theta':
+        conclusion_lines.append(f"• Theta oscillations (4-8 Hz) are associated with:")
+        conclusion_lines.append(f"  - Working memory and cognitive control")
+        conclusion_lines.append(f"  - Temporal encoding of speech segments")
+        conclusion_lines.append(f"  - Auditory processing and attention")
+    elif band_config['name'] == 'alpha':
+        conclusion_lines.append(f"• Alpha oscillations (8-12 Hz) are associated with:")
+        conclusion_lines.append(f"  - Cortical inhibition and functional gating")
+        conclusion_lines.append(f"  - Attention and sensory processing")
+        conclusion_lines.append(f"  - Task-related suppression vs. enhancement")
+
+    if n_total_clusters > 0:
+        conclusion_lines.append(f"• The observed differences suggest condition-specific {band_config['name']} modulation")
+        conclusion_lines.append(f"  in language/auditory processing regions (perisylvian cortex)")
+
+    conclusion_lines.append("")
+    conclusion_lines.append("NEXT STEPS:")
+    conclusion_lines.append("-" * 80)
+    conclusion_lines.append(f"• Review detailed cluster report: {subject_id}_cluster_report.txt")
+    conclusion_lines.append(f"• Examine visualizations: {subject_id}_summary_cluster-based.png")
+    conclusion_lines.append(f"• Compare with other subjects for group-level patterns")
+    conclusion_lines.append(f"• Use roi_group_analysis.py for ROI-specific group statistics")
+    conclusion_lines.append("")
+    conclusion_lines.append("="*80)
+
+    # Create final text
+    conclusion_text = "\n".join(conclusion_lines)
+
+    # Print to console
+    print(conclusion_text)
+
+    # Save to file if requested
+    if save_path:
+        with open(save_path, 'w') as f:
+            f.write(conclusion_text)
+        print(f"\nConclusion saved to: {save_path}")
+
+    return conclusion_text
+
+
+def generate_cross_subject_summary(successful_subjects, output_base_dir, band_config):
+    """
+    Generate cross-subject comparison and group-level pattern summary
+
+    Parameters:
+    -----------
+    successful_subjects : list
+        List of subject IDs that were successfully processed
+    output_base_dir : str
+        Base directory containing subject results
+    band_config : dict
+        Band configuration (name, range_str)
+
+    Returns:
+    --------
+    summary_text : str
+        Cross-subject summary text
+    """
+    if len(successful_subjects) == 0:
+        return None
+
+    print("\n" + "="*80)
+    print(f"GENERATING CROSS-SUBJECT SUMMARY ({band_config['name'].upper()} BAND)")
+    print("="*80)
+
+    summary_lines = []
+    output_path = Path(output_base_dir)
+
+    # Collect data from all subjects
+    subject_stats = []
+
+    for subject_id in successful_subjects:
+        subject_dir = output_path / subject_id
+        summary_csv = subject_dir / f'{subject_id}_cluster_summary.csv'
+
+        if not summary_csv.exists():
+            continue
+
+        # Load summary table
+        df = pd.read_csv(summary_csv)
+
+        if len(df) > 0:
+            n_clusters = len(df)
+            n_channels = df['Channel_Index'].nunique()
+            n_speech_greater = len(df[df['Effect_Direction'] == 'Speech > Music'])
+            n_music_greater = len(df[df['Effect_Direction'] == 'Music > Speech'])
+            mean_effect_mag = df['Effect_Magnitude'].mean()
+
+            subject_stats.append({
+                'subject': subject_id,
+                'n_clusters': n_clusters,
+                'n_channels': n_channels,
+                'n_speech_greater': n_speech_greater,
+                'n_music_greater': n_music_greater,
+                'mean_effect_magnitude': mean_effect_mag,
+                'predominant_direction': 'Music > Speech' if n_music_greater > n_speech_greater else 'Speech > Music' if n_speech_greater > n_music_greater else 'Mixed'
+            })
+
+    if len(subject_stats) == 0:
+        print("  No cluster results found across subjects")
+        return None
+
+    # Create summary DataFrame
+    stats_df = pd.DataFrame(subject_stats)
+
+    # Header
+    summary_lines.append("\n" + "="*80)
+    summary_lines.append(f"CROSS-SUBJECT PATTERN ANALYSIS: {band_config['name'].upper()} BAND ({band_config['range_str']})")
+    summary_lines.append("="*80)
+    summary_lines.append("")
+
+    # Overall statistics
+    n_subjects_with_effects = len(stats_df)
+    n_subjects_without_effects = len(successful_subjects) - n_subjects_with_effects
+
+    summary_lines.append("GROUP-LEVEL STATISTICS:")
+    summary_lines.append("-" * 80)
+    summary_lines.append(f"• Total subjects analyzed: {len(successful_subjects)}")
+    summary_lines.append(f"• Subjects with significant effects: {n_subjects_with_effects} ({100*n_subjects_with_effects/len(successful_subjects):.1f}%)")
+    summary_lines.append(f"• Subjects without significant effects: {n_subjects_without_effects}")
+    summary_lines.append("")
+
+    if n_subjects_with_effects > 0:
+        # Cluster statistics
+        total_clusters = stats_df['n_clusters'].sum()
+        mean_clusters_per_subject = stats_df['n_clusters'].mean()
+        median_clusters = stats_df['n_clusters'].median()
+
+        summary_lines.append(f"• Total significant clusters across all subjects: {total_clusters}")
+        summary_lines.append(f"• Mean clusters per subject: {mean_clusters_per_subject:.1f} (median: {median_clusters:.0f})")
+        summary_lines.append(f"• Mean effect magnitude: {stats_df['mean_effect_magnitude'].mean():.2f}")
+        summary_lines.append("")
+
+        # Effect direction analysis
+        total_speech_greater = stats_df['n_speech_greater'].sum()
+        total_music_greater = stats_df['n_music_greater'].sum()
+        total_effects = total_speech_greater + total_music_greater
+
+        summary_lines.append("EFFECT DIRECTION ACROSS ALL SUBJECTS:")
+        summary_lines.append("-" * 80)
+        summary_lines.append(f"• Speech > Music: {total_speech_greater} clusters ({100*total_speech_greater/total_effects:.1f}%)")
+        summary_lines.append(f"• Music > Speech: {total_music_greater} clusters ({100*total_music_greater/total_effects:.1f}%)")
+        summary_lines.append("")
+
+        # Predominant pattern
+        n_music_dominant = len(stats_df[stats_df['predominant_direction'] == 'Music > Speech'])
+        n_speech_dominant = len(stats_df[stats_df['predominant_direction'] == 'Speech > Music'])
+        n_mixed = len(stats_df[stats_df['predominant_direction'] == 'Mixed'])
+
+        summary_lines.append("PREDOMINANT PATTERN PER SUBJECT:")
+        summary_lines.append("-" * 80)
+        summary_lines.append(f"• Subjects with Music > Speech pattern: {n_music_dominant}/{n_subjects_with_effects}")
+        summary_lines.append(f"• Subjects with Speech > Music pattern: {n_speech_dominant}/{n_subjects_with_effects}")
+        summary_lines.append(f"• Subjects with mixed effects: {n_mixed}/{n_subjects_with_effects}")
+        summary_lines.append("")
+
+        # Group-level conclusion
+        summary_lines.append("GROUP-LEVEL CONCLUSION:")
+        summary_lines.append("-" * 80)
+
+        if n_music_dominant > n_speech_dominant * 1.5:
+            summary_lines.append(f"• CONSISTENT PATTERN: Majority of subjects ({n_music_dominant}/{n_subjects_with_effects}) show")
+            summary_lines.append(f"  stronger {band_config['name']} power for MUSIC than speech")
+            summary_lines.append(f"• This suggests music stimuli consistently elicit enhanced neural oscillatory")
+            summary_lines.append(f"  activity in perisylvian language/auditory regions across the group")
+        elif n_speech_dominant > n_music_dominant * 1.5:
+            summary_lines.append(f"• CONSISTENT PATTERN: Majority of subjects ({n_speech_dominant}/{n_subjects_with_effects}) show")
+            summary_lines.append(f"  stronger {band_config['name']} power for SPEECH than music")
+            summary_lines.append(f"• This suggests speech stimuli consistently elicit enhanced neural oscillatory")
+            summary_lines.append(f"  activity in perisylvian language/auditory regions across the group")
+        else:
+            summary_lines.append(f"• VARIABLE PATTERN: Subjects show heterogeneous responses")
+            summary_lines.append(f"• No consistent group-level preference for speech or music in {band_config['name']} band")
+            summary_lines.append(f"• Individual differences may reflect subject-specific processing strategies")
+            summary_lines.append(f"  or anatomical/functional variability in electrode placement")
+
+        # Per-subject breakdown
+        summary_lines.append("")
+        summary_lines.append("PER-SUBJECT BREAKDOWN:")
+        summary_lines.append("-" * 80)
+
+        for _, row in stats_df.iterrows():
+            summary_lines.append(f"• {row['subject']}: {row['n_clusters']} clusters ({row['n_channels']} channels) - {row['predominant_direction']}")
+
+    summary_lines.append("")
+    summary_lines.append("NEXT STEPS FOR GROUP ANALYSIS:")
+    summary_lines.append("-" * 80)
+    summary_lines.append(f"• Use roi_group_analysis.py to perform ROI-specific statistical tests")
+    summary_lines.append(f"  python roi_group_analysis.py --band {band_config['name']}")
+    summary_lines.append(f"• This will aggregate data across subjects within anatomical ROIs")
+    summary_lines.append(f"• ROI-based analysis provides formal group-level statistics with correction")
+    summary_lines.append(f"  for multiple comparisons across time-frequency space")
+    summary_lines.append("")
+    summary_lines.append("="*80)
+
+    # Create final text
+    summary_text = "\n".join(summary_lines)
+
+    # Print to console
+    print(summary_text)
+
+    # Save to file
+    summary_file = output_path / f'cross_subject_summary_{band_config["name"]}.txt'
+    with open(summary_file, 'w') as f:
+        f.write(summary_text)
+    print(f"\nCross-subject summary saved to: {summary_file}")
+
+    return summary_text
+
+
 def verify_two_tailed_test(results):
     """
     Verify that the two-tailed test is working correctly
@@ -2115,6 +2415,16 @@ def run_subject_pipeline(subject_id, data_dir, electrode_results_dir='./electrod
         else:
             print("  No significant clusters found for this subject")
 
+        # Generate analysis conclusion and interpretation
+        conclusion_path = os.path.join(subject_output_dir, f'{subject_id}_conclusion.txt')
+        generate_analysis_conclusion(
+            cluster_results,
+            summary_df,
+            subject_id,
+            band_config,
+            save_path=conclusion_path
+        )
+
         print(f"\n{'='*80}")
         print(f"SUCCESSFULLY COMPLETED {subject_id}")
         print(f"{'='*80}\n")
@@ -2410,6 +2720,10 @@ Examples:
             failed_subjects.append(subject_id)
 
     total_time = time.time() - start_time_total
+
+    # Generate cross-subject summary
+    if len(successful_subjects) > 0:
+        generate_cross_subject_summary(successful_subjects, OUTPUT_DIR, band_config)
 
     # Final summary
     print("\n" + "="*80)

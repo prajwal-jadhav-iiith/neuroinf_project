@@ -1,0 +1,6 @@
+category,n_electrodes,n_subjects,n_regions
+Temporal,300,19,4
+Sensorimotor,236,18,4
+Inferior Parietal,175,16,4
+Inferior Frontal,130,17,5
+Insula,16,3,2

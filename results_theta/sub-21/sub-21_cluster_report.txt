@@ -9,13 +9,13 @@ Method: cluster-based (MNE standard)
 Total channels analyzed: 39
 Channels with significant clusters: 5
 Total significant clusters: 9
-Total significant pixels: 1575
+Total significant pixels: 1187
 Percentage of all pixels: 0.18%
 
 EFFECT DIRECTION
 --------------------------------------------------------------------------------
-Significant pixels with positive t (Speech > Music): 136
-Significant pixels with negative t (Music > Speech): 1439
+Significant pixels with positive t (Speech > Music): 102
+Significant pixels with negative t (Music > Speech): 1085
 
 INTERPRETATION: Music shows higher theta power than Speech
 
@@ -25,38 +25,38 @@ DETAILED CLUSTER INFORMATION BY CHANNEL
 Channel 13: PHR9
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 462.2
+Cluster threshold for this channel: 347.0
 
   Cluster 1:
-    Size: 262 pixels
-    Cluster mass: 462.2
+    Size: 197 pixels
+    Cluster mass: 347.0
     Frequency range: 4.00 - 4.50 Hz
     Time range: 0.00 - 1.58 seconds
-    Mean t-statistic: -0.343
-    Peak t-statistic: -1.608
+    Mean t-statistic: -0.345
+    Peak t-statistic: -1.609
     Effect direction: Music > Speech
 
 
 Channel 16: ATR5
 --------------------------------------------------------------------------------
 Number of significant clusters: 2
-Cluster threshold for this channel: 567.6
+Cluster threshold for this channel: 429.7
 
   Cluster 1:
-    Size: 349 pixels
-    Cluster mass: 567.6
+    Size: 265 pixels
+    Cluster mass: 429.7
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.13 seconds
-    Mean t-statistic: -0.523
+    Time range: 0.00 - 2.16 seconds
+    Mean t-statistic: -0.542
     Peak t-statistic: -3.284
     Effect direction: Music > Speech
 
   Cluster 2:
-    Size: 307 pixels
-    Cluster mass: 448.7
+    Size: 234 pixels
+    Cluster mass: 340.9
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 1.86 seconds
-    Mean t-statistic: -0.562
+    Time range: 0.00 - 1.89 seconds
+    Mean t-statistic: -0.536
     Peak t-statistic: -3.284
     Effect direction: Music > Speech
 
@@ -64,72 +64,72 @@ Cluster threshold for this channel: 567.6
 Channel 17: ATR6
 --------------------------------------------------------------------------------
 Number of significant clusters: 2
-Cluster threshold for this channel: 611.7
+Cluster threshold for this channel: 458.2
 
   Cluster 1:
-    Size: 346 pixels
-    Cluster mass: 539.8
+    Size: 266 pixels
+    Cluster mass: 413.1
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.09 seconds
-    Mean t-statistic: -0.290
-    Peak t-statistic: -2.778
+    Time range: 0.00 - 2.14 seconds
+    Mean t-statistic: -0.336
+    Peak t-statistic: -2.763
     Effect direction: Music > Speech
 
   Cluster 2:
-    Size: 408 pixels
-    Cluster mass: 611.7
+    Size: 306 pixels
+    Cluster mass: 458.2
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.51 seconds
-    Mean t-statistic: -0.380
-    Peak t-statistic: -2.778
+    Time range: 0.00 - 2.50 seconds
+    Mean t-statistic: -0.379
+    Peak t-statistic: -2.763
     Effect direction: Music > Speech
 
 
 Channel 18: ATR7
 --------------------------------------------------------------------------------
 Number of significant clusters: 3
-Cluster threshold for this channel: 646.3
+Cluster threshold for this channel: 482.6
 
   Cluster 1:
-    Size: 279 pixels
-    Cluster mass: 415.0
+    Size: 209 pixels
+    Cluster mass: 311.4
     Frequency range: 4.00 - 4.50 Hz
     Time range: 0.00 - 1.72 seconds
     Mean t-statistic: -0.566
-    Peak t-statistic: -3.235
+    Peak t-statistic: -3.270
     Effect direction: Music > Speech
 
   Cluster 2:
-    Size: 402 pixels
-    Cluster mass: 646.3
+    Size: 300 pixels
+    Cluster mass: 482.6
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.47 seconds
-    Mean t-statistic: -0.443
-    Peak t-statistic: -3.235
+    Time range: 0.00 - 2.45 seconds
+    Mean t-statistic: -0.436
+    Peak t-statistic: -3.270
     Effect direction: Music > Speech
 
   Cluster 3:
-    Size: 336 pixels
-    Cluster mass: 540.7
+    Size: 250 pixels
+    Cluster mass: 403.3
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 1.96 seconds
-    Mean t-statistic: -0.358
-    Peak t-statistic: -3.235
+    Time range: 0.00 - 1.94 seconds
+    Mean t-statistic: -0.363
+    Peak t-statistic: -3.270
     Effect direction: Music > Speech
 
 
 Channel 19: ATR8
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 538.4
+Cluster threshold for this channel: 404.8
 
   Cluster 1:
-    Size: 327 pixels
-    Cluster mass: 538.4
+    Size: 246 pixels
+    Cluster mass: 404.8
     Frequency range: 4.00 - 4.50 Hz
     Time range: 0.00 - 2.03 seconds
-    Mean t-statistic: -0.263
-    Peak t-statistic: -2.128
+    Mean t-statistic: -0.261
+    Peak t-statistic: -2.098
     Effect direction: Music > Speech
 
 

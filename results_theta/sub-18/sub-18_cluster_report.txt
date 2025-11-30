@@ -7,15 +7,15 @@ OVERALL SUMMARY
 --------------------------------------------------------------------------------
 Method: cluster-based (MNE standard)
 Total channels analyzed: 35
-Channels with significant clusters: 10
-Total significant clusters: 10
-Total significant pixels: 615
-Percentage of all pixels: 0.30%
+Channels with significant clusters: 11
+Total significant clusters: 11
+Total significant pixels: 1959
+Percentage of all pixels: 0.32%
 
 EFFECT DIRECTION
 --------------------------------------------------------------------------------
-Significant pixels with positive t (Speech > Music): 303
-Significant pixels with negative t (Music > Speech): 312
+Significant pixels with positive t (Speech > Music): 905
+Significant pixels with negative t (Music > Speech): 1054
 
 INTERPRETATION: Music shows higher theta power than Speech
 
@@ -25,74 +25,89 @@ DETAILED CLUSTER INFORMATION BY CHANNEL
 Channel 12: FL08
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 208.9
+Cluster threshold for this channel: 614.6
 
   Cluster 1:
-    Size: 152 pixels
-    Cluster mass: 208.9
+    Size: 446 pixels
+    Cluster mass: 614.6
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 3.66 seconds
-    Mean t-statistic: 0.245
-    Peak t-statistic: 3.554
+    Time range: 0.00 - 3.59 seconds
+    Mean t-statistic: 0.196
+    Peak t-statistic: 3.507
     Effect direction: Speech > Music
 
 
 Channel 19: FL17
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 118.0
+Cluster threshold for this channel: 348.5
 
   Cluster 1:
-    Size: 85 pixels
-    Cluster mass: 118.0
+    Size: 250 pixels
+    Cluster mass: 348.5
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.02 seconds
-    Mean t-statistic: -0.339
-    Peak t-statistic: -1.565
+    Time range: 0.00 - 2.00 seconds
+    Mean t-statistic: -0.348
+    Peak t-statistic: -1.724
     Effect direction: Music > Speech
 
 
 Channel 20: FL18
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 196.9
+Cluster threshold for this channel: 602.4
 
   Cluster 1:
-    Size: 126 pixels
-    Cluster mass: 196.9
+    Size: 388 pixels
+    Cluster mass: 602.4
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 3.09 seconds
-    Mean t-statistic: -0.041
-    Peak t-statistic: -2.111
+    Time range: 0.00 - 3.20 seconds
+    Mean t-statistic: -0.009
+    Peak t-statistic: -2.280
+    Effect direction: Music > Speech
+
+
+Channel 21: FL19
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 275.3
+
+  Cluster 1:
+    Size: 210 pixels
+    Cluster mass: 275.3
+    Frequency range: 4.00 - 4.50 Hz
+    Time range: 0.00 - 1.62 seconds
+    Mean t-statistic: -0.499
+    Peak t-statistic: 4.137
     Effect direction: Music > Speech
 
 
 Channel 22: FL20
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 165.5
+Cluster threshold for this channel: 492.0
 
   Cluster 1:
-    Size: 103 pixels
-    Cluster mass: 165.5
+    Size: 307 pixels
+    Cluster mass: 492.0
     Frequency range: 4.00 - 4.50 Hz
     Time range: 0.00 - 2.48 seconds
-    Mean t-statistic: -0.539
-    Peak t-statistic: -2.722
+    Mean t-statistic: -0.526
+    Peak t-statistic: -2.777
     Effect direction: Music > Speech
 
 
 Channel 23: FL21
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 186.2
+Cluster threshold for this channel: 573.1
 
   Cluster 1:
-    Size: 131 pixels
-    Cluster mass: 186.2
+    Size: 407 pixels
+    Cluster mass: 573.1
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 3.14 seconds
-    Mean t-statistic: -0.062
+    Time range: 0.00 - 3.28 seconds
+    Mean t-statistic: -0.114
     Peak t-statistic: -2.326
     Effect direction: Music > Speech
 
@@ -100,75 +115,75 @@ Cluster threshold for this channel: 186.2
 Channel 24: FL22
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 184.0
+Cluster threshold for this channel: 561.0
 
   Cluster 1:
-    Size: 125 pixels
-    Cluster mass: 184.0
+    Size: 384 pixels
+    Cluster mass: 561.0
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.95 seconds
-    Mean t-statistic: -0.263
-    Peak t-statistic: -2.868
+    Time range: 0.00 - 3.06 seconds
+    Mean t-statistic: -0.225
+    Peak t-statistic: -2.966
     Effect direction: Music > Speech
 
 
 Channel 27: FL25
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 159.2
+Cluster threshold for this channel: 466.1
 
   Cluster 1:
-    Size: 96 pixels
-    Cluster mass: 159.2
+    Size: 279 pixels
+    Cluster mass: 466.1
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.25 seconds
-    Mean t-statistic: -0.187
-    Peak t-statistic: -2.084
+    Time range: 0.00 - 2.20 seconds
+    Mean t-statistic: -0.193
+    Peak t-statistic: -2.233
     Effect direction: Music > Speech
 
 
 Channel 29: FL27
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 121.6
+Cluster threshold for this channel: 367.6
 
   Cluster 1:
-    Size: 75 pixels
-    Cluster mass: 121.6
+    Size: 227 pixels
+    Cluster mass: 367.6
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 1.83 seconds
-    Mean t-statistic: -0.631
-    Peak t-statistic: -2.903
+    Time range: 0.00 - 1.88 seconds
+    Mean t-statistic: -0.646
+    Peak t-statistic: -2.984
     Effect direction: Music > Speech
 
 
 Channel 31: FL29
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 141.6
+Cluster threshold for this channel: 429.8
 
   Cluster 1:
-    Size: 87 pixels
-    Cluster mass: 141.6
+    Size: 265 pixels
+    Cluster mass: 429.8
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.06 seconds
-    Mean t-statistic: 0.474
-    Peak t-statistic: 2.504
+    Time range: 0.00 - 2.12 seconds
+    Mean t-statistic: 0.458
+    Peak t-statistic: 3.034
     Effect direction: Speech > Music
 
 
 Channel 32: FL30
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 297.6
+Cluster threshold for this channel: 903.5
 
   Cluster 1:
-    Size: 197 pixels
-    Cluster mass: 297.6
+    Size: 601 pixels
+    Cluster mass: 903.5
     Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 4.88 seconds
-    Mean t-statistic: -0.998
-    Peak t-statistic: 3.467
+    Time range: 0.00 - 4.98 seconds
+    Mean t-statistic: -1.020
+    Peak t-statistic: 3.979
     Effect direction: Music > Speech
 
 
@@ -192,7 +207,6 @@ CHANNELS WITHOUT SIGNIFICANT CLUSTERS
   Channel 16: FL13
   Channel 17: FL15
   Channel 18: FL16
-  Channel 21: FL19
   Channel 25: FL23
   Channel 26: FL24
   Channel 28: FL26

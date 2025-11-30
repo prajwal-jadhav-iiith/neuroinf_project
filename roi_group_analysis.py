@@ -5,11 +5,16 @@ This script performs group-level statistical comparisons between speech and musi
 conditions for specific anatomical regions of interest (ROIs).
 
 Key Features:
-- Loads preprocessed theta power data from multiple subjects
+- Loads preprocessed power data (theta or alpha band) from multiple subjects
 - Groups electrodes by anatomical ROI (e.g., superior temporal gyrus)
 - Averages within-subject across electrodes in each ROI
 - Performs group-level paired t-tests or cluster-based permutation tests
 - Generates ROI-specific visualizations and reports
+
+Usage:
+    python roi_group_analysis.py --band theta
+    python roi_group_analysis.py --band alpha
+    python roi_group_analysis.py --band alpha --method cluster --n-permutations 10000
 
 Author: Generated for neuroinformatics project
 Date: 2025
@@ -25,6 +30,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List, Tuple
 import warnings
+import argparse
 
 warnings.filterwarnings('ignore')
 
@@ -34,24 +40,27 @@ class ROIGroupAnalyzer:
     Main class for ROI-based group analysis
     """
 
-    def __init__(self, preprocessed_data_dir, output_dir='./roi_group_results'):
+    def __init__(self, preprocessed_data_dir, output_dir='./roi_group_results', band='theta'):
         """
         Initialize the ROI Group Analyzer
 
         Parameters:
         -----------
         preprocessed_data_dir : str
-            Directory containing preprocessed theta power data from full_pipeline.py
+            Directory containing preprocessed power data from full_pipeline.py
         output_dir : str
             Directory to save group analysis results
+        band : str
+            Frequency band to analyze: 'theta' or 'alpha' (default: 'theta')
         """
         self.preprocessed_data_dir = Path(preprocessed_data_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.band = band
 
         # Will be populated by load_all_subjects()
         self.subjects = []
-        self.subject_data = {}  # {subject_id: {speech_theta, music_theta, channels, roi_mapping}}
+        self.subject_data = {}  # {subject_id: {speech_power, music_power, channels, roi_mapping}}
 
         # Will be populated by build_roi_dataset()
         self.roi_data = {}  # {roi_name: {subjects, speech_timeseries, music_timeseries}}
@@ -69,26 +78,26 @@ class ROIGroupAnalyzer:
             Number of subjects loaded
         """
         print("\n" + "="*80)
-        print("LOADING PREPROCESSED DATA")
+        print(f"LOADING PREPROCESSED DATA ({self.band.upper()} BAND)")
         print("="*80)
 
-        # Find all theta power files
-        theta_files = list(self.preprocessed_data_dir.glob("*_theta_power.npz"))
+        # Find all power files for the specified band
+        power_files = list(self.preprocessed_data_dir.glob(f"*_{self.band}_power.npz"))
 
-        if len(theta_files) == 0:
+        if len(power_files) == 0:
             raise FileNotFoundError(
-                f"No preprocessed theta power files found in {self.preprocessed_data_dir}\n"
-                "Please run full_pipeline.py first to generate preprocessed data."
+                f"No preprocessed {self.band} power files found in {self.preprocessed_data_dir}\n"
+                f"Please run full_pipeline.py with --band {self.band} first to generate preprocessed data."
             )
 
-        print(f"\nFound {len(theta_files)} subjects with preprocessed data")
+        print(f"\nFound {len(power_files)} subjects with preprocessed {self.band} data")
 
-        for theta_file in sorted(theta_files):
+        for power_file in sorted(power_files):
             # Extract subject ID from filename
-            subject_id = theta_file.stem.replace('_theta_power', '')
+            subject_id = power_file.stem.replace(f'_{self.band}_power', '')
 
-            # Load theta power data
-            data = np.load(theta_file)
+            # Load power data
+            data = np.load(power_file)
 
             # Load ROI mapping
             roi_file = self.preprocessed_data_dir / f"{subject_id}_roi_mapping.csv"
@@ -99,10 +108,14 @@ class ROIGroupAnalyzer:
 
             roi_df = pd.read_csv(roi_file)
 
+            # Store data with dynamic keys
+            speech_key = f'speech_{self.band}_power'
+            music_key = f'music_{self.band}_power'
+
             # Store data
             self.subject_data[subject_id] = {
-                'speech_theta': data['speech_theta_power'],
-                'music_theta': data['music_theta_power'],
+                'speech_power': data[speech_key],
+                'music_power': data[music_key],
                 'channel_names': data['channel_names'],
                 'roi_mapping': roi_df,
                 'times': data['times'],
@@ -173,7 +186,7 @@ class ROIGroupAnalyzer:
 
         For each subject:
         1. Find all electrodes in the ROI
-        2. Average theta power across those electrodes
+        2. Average power across those electrodes
         3. Get one representative time-series per subject per condition
 
         Parameters:
@@ -200,8 +213,8 @@ class ROIGroupAnalyzer:
 
         for subject_id, data in self.subject_data.items():
             roi_df = data['roi_mapping']
-            speech_theta = data['speech_theta']
-            music_theta = data['music_theta']
+            speech_power = data['speech_power']
+            music_power = data['music_power']
             channel_names = data['channel_names']
 
             # Find electrodes in this ROI
@@ -217,8 +230,8 @@ class ROIGroupAnalyzer:
                 continue
 
             # Average across electrodes for this subject
-            subject_speech = speech_theta[channel_indices, :].mean(axis=0)  # (n_times,)
-            subject_music = music_theta[channel_indices, :].mean(axis=0)
+            subject_speech = speech_power[channel_indices, :].mean(axis=0)  # (n_times,)
+            subject_music = music_power[channel_indices, :].mean(axis=0)
 
             speech_timeseries_list.append(subject_speech)
             music_timeseries_list.append(subject_music)
@@ -564,7 +577,7 @@ class ROIGroupAnalyzer:
                         alpha=0.3, color='red', zorder=3)
 
         ax.set_xlabel('Time (s)', fontsize=12)
-        ax.set_ylabel('Theta Power (a.u.)', fontsize=12)
+        ax.set_ylabel(f'{self.band.capitalize()} Power (a.u.)', fontsize=12)
         ax.set_title(f'{roi_name}\nGroup Average (n={n_subjects} subjects)', fontsize=14, fontweight='bold')
         ax.legend(loc='best')
         ax.grid(True, alpha=0.3)
@@ -781,22 +794,378 @@ class ROIGroupAnalyzer:
             print("No ROIs with significant effects found.")
 
 
+def generate_roi_analysis_summary(results, band, output_dir):
+    """
+    Generate comprehensive summary and interpretation of ROI group analysis results
+
+    Parameters:
+    -----------
+    results : dict
+        Dictionary of ROI results from run_all_rois()
+    band : str
+        Frequency band analyzed ('theta' or 'alpha')
+    output_dir : Path
+        Output directory for saving summary
+
+    Returns:
+    --------
+    summary_text : str
+        Formatted summary text
+    """
+    summary_lines = []
+
+    # Header
+    summary_lines.append("\n" + "="*80)
+    summary_lines.append(f"ROI GROUP ANALYSIS SUMMARY: {band.upper()} BAND")
+    summary_lines.append("="*80)
+    summary_lines.append("")
+
+    # Collect significant ROIs
+    significant_rois = []
+    for roi_name, roi_result in results.items():
+        if roi_result is None:
+            continue
+
+        stats = roi_result.get('stats')  # Fixed: key is 'stats', not 'stats_results'
+        if stats is None:
+            continue
+
+        # Check for significance
+        is_significant = False
+        if 'significant_clusters' in stats and len(stats['significant_clusters']) > 0:
+            is_significant = True
+        elif 'significant_mask_fdr' in stats and np.sum(stats['significant_mask_fdr']) > 0:
+            is_significant = True
+
+        if is_significant:
+            n_subjects = len(roi_result['roi_dataset']['subjects'])
+            significant_rois.append({
+                'roi': roi_name,
+                'n_subjects': n_subjects,
+                'stats': stats,
+                'result': roi_result
+            })
+
+    # Overall statistics
+    total_rois = len(results)
+    n_significant = len(significant_rois)
+    n_not_significant = total_rois - n_significant
+
+    summary_lines.append("OVERALL RESULTS:")
+    summary_lines.append("-" * 80)
+    summary_lines.append(f"• Total ROIs analyzed: {total_rois}")
+    summary_lines.append(f"• ROIs with significant effects: {n_significant} ({100*n_significant/total_rois:.1f}%)")
+    summary_lines.append(f"• ROIs without significant effects: {n_not_significant}")
+    summary_lines.append("")
+
+    if n_significant == 0:
+        summary_lines.append("CONCLUSION:")
+        summary_lines.append("-" * 80)
+        summary_lines.append(f"• No ROIs show significant differences between Speech and Music")
+        summary_lines.append(f"• This suggests similar {band} power responses across conditions")
+        summary_lines.append(f"• Consider:")
+        summary_lines.append(f"  - Lower precluster threshold for more liberal testing")
+        summary_lines.append(f"  - Check individual subject results for heterogeneous patterns")
+        summary_lines.append(f"  - Analyze different frequency bands")
+    else:
+        # Categorize ROIs by anatomical region
+        roi_categories = {
+            'Temporal': [],
+            'Frontal': [],
+            'Parietal': [],
+            'Insula': [],
+            'Other': []
+        }
+
+        for roi_info in significant_rois:
+            roi = roi_info['roi']
+            if 'temporal' in roi.lower() or 'heschl' in roi.lower():
+                roi_categories['Temporal'].append(roi_info)
+            elif 'frontal' in roi.lower() or 'pars' in roi.lower():
+                roi_categories['Frontal'].append(roi_info)
+            elif 'parietal' in roi.lower() or 'supramarginal' in roi.lower() or 'angular' in roi.lower():
+                roi_categories['Parietal'].append(roi_info)
+            elif 'insula' in roi.lower():
+                roi_categories['Insula'].append(roi_info)
+            else:
+                roi_categories['Other'].append(roi_info)
+
+        # Report by anatomical category
+        summary_lines.append("SIGNIFICANT ROIs BY ANATOMICAL REGION:")
+        summary_lines.append("-" * 80)
+
+        for category, rois in roi_categories.items():
+            if len(rois) > 0:
+                summary_lines.append(f"\n{category} Cortex ({len(rois)} ROIs):")
+                for roi_info in rois:
+                    roi_name = roi_info['roi']
+                    n_subj = roi_info['n_subjects']
+
+                    # Determine effect direction
+                    stats = roi_info['stats']
+                    result = roi_info['result']
+                    method = result.get('method', 'unknown')
+
+                    if method == 'cluster' and 'significant_clusters' in stats and len(stats['significant_clusters']) > 0:
+                        # For cluster method: count clusters and infer direction from t_obs
+                        n_clusters = len(stats['significant_clusters'])
+                        t_obs = stats.get('t_obs', np.array([]))
+
+                        # Get t-values at significant timepoints
+                        sig_t_values = []
+                        for cluster in stats['significant_clusters']:
+                            time_indices = cluster['time_indices']
+                            sig_t_values.extend(t_obs[time_indices])
+
+                        # Determine predominant direction
+                        pos_count = sum(1 for t in sig_t_values if t > 0)
+                        neg_count = sum(1 for t in sig_t_values if t < 0)
+
+                        if pos_count > neg_count * 1.5:
+                            direction = "Speech > Music"
+                        elif neg_count > pos_count * 1.5:
+                            direction = "Music > Speech"
+                        else:
+                            direction = "Mixed"
+
+                        summary_lines.append(f"  • {roi_name} (n={n_subj}): {n_clusters} clusters - {direction}")
+
+                    elif method == 'ttest' and 'significant_mask_fdr' in stats:
+                        # For t-test method: determine direction from t-values
+                        t_values = stats.get('t_values', np.array([]))
+                        sig_mask = stats['significant_mask_fdr']
+                        sig_t_values = t_values[sig_mask]
+
+                        n_sig = np.sum(sig_mask)
+
+                        if len(sig_t_values) > 0:
+                            # Determine predominant direction
+                            pos_count = np.sum(sig_t_values > 0)
+                            neg_count = np.sum(sig_t_values < 0)
+
+                            if pos_count > neg_count * 1.5:
+                                direction = "Speech > Music"
+                            elif neg_count > pos_count * 1.5:
+                                direction = "Music > Speech"
+                            else:
+                                direction = "Mixed"
+
+                            summary_lines.append(f"  • {roi_name} (n={n_subj}): {n_sig} timepoints - {direction}")
+                        else:
+                            summary_lines.append(f"  • {roi_name} (n={n_subj}): Significant effect")
+
+                    else:
+                        summary_lines.append(f"  • {roi_name} (n={n_subj}): Significant effect")
+
+        # Interpretation
+        summary_lines.append("")
+        summary_lines.append("ANATOMICAL INTERPRETATION:")
+        summary_lines.append("-" * 80)
+
+        if len(roi_categories['Temporal']) > 0:
+            summary_lines.append(f"\n• TEMPORAL REGIONS ({len(roi_categories['Temporal'])} ROIs):")
+            summary_lines.append(f"  - Function: Auditory processing, speech perception, music processing")
+            summary_lines.append(f"  - Finding: Differential {band} power suggests condition-specific auditory encoding")
+            if band == 'theta':
+                summary_lines.append(f"  - Theta interpretation: Temporal chunking and segmentation of auditory streams")
+            elif band == 'alpha':
+                summary_lines.append(f"  - Alpha interpretation: Attentional gating and inhibitory control in auditory cortex")
+
+        if len(roi_categories['Frontal']) > 0:
+            summary_lines.append(f"\n• FRONTAL REGIONS ({len(roi_categories['Frontal'])} ROIs):")
+            summary_lines.append(f"  - Function: Speech production (Broca's area), motor planning, cognitive control")
+            summary_lines.append(f"  - Finding: Differential {band} power suggests condition-specific motor/cognitive engagement")
+            if band == 'theta':
+                summary_lines.append(f"  - Theta interpretation: Working memory and task-related cognitive control")
+            elif band == 'alpha':
+                summary_lines.append(f"  - Alpha interpretation: Motor inhibition and preparation states")
+
+        if len(roi_categories['Parietal']) > 0:
+            summary_lines.append(f"\n• PARIETAL REGIONS ({len(roi_categories['Parietal'])} ROIs):")
+            summary_lines.append(f"  - Function: Multisensory integration, language comprehension (Wernicke's area)")
+            summary_lines.append(f"  - Finding: Differential {band} power suggests condition-specific integration processes")
+            if band == 'theta':
+                summary_lines.append(f"  - Theta interpretation: Semantic processing and comprehension")
+            elif band == 'alpha':
+                summary_lines.append(f"  - Alpha interpretation: Attention allocation and sensory gating")
+
+        if len(roi_categories['Insula']) > 0:
+            summary_lines.append(f"\n• INSULAR REGIONS ({len(roi_categories['Insula'])} ROIs):")
+            summary_lines.append(f"  - Function: Interoception, emotional processing, salience detection")
+            summary_lines.append(f"  - Finding: Differential {band} power suggests condition-specific salience or affect")
+
+        # Overall conclusion
+        summary_lines.append("")
+        summary_lines.append("GROUP-LEVEL CONCLUSION:")
+        summary_lines.append("-" * 80)
+
+        # Count predominant directions across all significant ROIs
+        total_speech_dominant = 0
+        total_music_dominant = 0
+        total_mixed = 0
+
+        for roi_info in significant_rois:
+            stats = roi_info['stats']
+            result = roi_info['result']
+            method = result.get('method', 'unknown')
+
+            # Determine direction based on method
+            if method == 'cluster' and 'significant_clusters' in stats and len(stats['significant_clusters']) > 0:
+                # For cluster method: infer direction from t_obs
+                t_obs = stats.get('t_obs', np.array([]))
+                sig_t_values = []
+                for cluster in stats['significant_clusters']:
+                    time_indices = cluster['time_indices']
+                    sig_t_values.extend(t_obs[time_indices])
+
+                pos_count = sum(1 for t in sig_t_values if t > 0)
+                neg_count = sum(1 for t in sig_t_values if t < 0)
+
+                if pos_count > neg_count * 1.5:
+                    total_speech_dominant += 1
+                elif neg_count > pos_count * 1.5:
+                    total_music_dominant += 1
+                else:
+                    total_mixed += 1
+
+            elif method == 'ttest' and 'significant_mask_fdr' in stats:
+                # For t-test method: determine direction from t-values
+                t_values = stats.get('t_values', np.array([]))
+                sig_mask = stats['significant_mask_fdr']
+                sig_t_values = t_values[sig_mask]
+
+                if len(sig_t_values) > 0:
+                    pos_count = np.sum(sig_t_values > 0)
+                    neg_count = np.sum(sig_t_values < 0)
+
+                    if pos_count > neg_count * 1.5:
+                        total_speech_dominant += 1
+                    elif neg_count > pos_count * 1.5:
+                        total_music_dominant += 1
+                    else:
+                        total_mixed += 1
+
+        summary_lines.append(f"• {n_significant} ROIs show significant speech vs. music differences in {band} band")
+
+        if total_music_dominant > total_speech_dominant * 1.5:
+            summary_lines.append(f"• PREDOMINANT PATTERN: Music > Speech ({total_music_dominant}/{n_significant} ROIs)")
+            summary_lines.append(f"• Music stimuli elicit stronger {band} oscillations in perisylvian cortex")
+            summary_lines.append(f"• This suggests enhanced neural engagement for musical vs. speech stimuli")
+        elif total_speech_dominant > total_music_dominant * 1.5:
+            summary_lines.append(f"• PREDOMINANT PATTERN: Speech > Music ({total_speech_dominant}/{n_significant} ROIs)")
+            summary_lines.append(f"• Speech stimuli elicit stronger {band} oscillations in perisylvian cortex")
+            summary_lines.append(f"• This suggests enhanced neural engagement for speech vs. musical stimuli")
+        else:
+            summary_lines.append(f"• HETEROGENEOUS PATTERN: Both directions represented")
+            summary_lines.append(f"  - Music > Speech: {total_music_dominant} ROIs")
+            summary_lines.append(f"  - Speech > Music: {total_speech_dominant} ROIs")
+            summary_lines.append(f"  - Mixed: {total_mixed} ROIs")
+            summary_lines.append(f"• Different ROIs show distinct functional specialization")
+
+    summary_lines.append("")
+    summary_lines.append("RECOMMENDATIONS:")
+    summary_lines.append("-" * 80)
+    summary_lines.append(f"• Examine individual ROI plots in: {output_dir}")
+    summary_lines.append(f"• Check summary CSV for detailed statistics")
+    summary_lines.append(f"• Consider follow-up analyses:")
+    summary_lines.append(f"  - Connectivity analysis between significant ROIs")
+    summary_lines.append(f"  - Single-trial variability in high-effect ROIs")
+    summary_lines.append(f"  - Cross-frequency coupling (if multiple bands analyzed)")
+    summary_lines.append("")
+    summary_lines.append("="*80)
+
+    # Create final text
+    summary_text = "\n".join(summary_lines)
+
+    # Print to console
+    print(summary_text)
+
+    # Save to file
+    summary_file = output_dir / f'roi_analysis_conclusion_{band}.txt'
+    with open(summary_file, 'w') as f:
+        f.write(summary_text)
+    print(f"\n[OK] Summary saved to: {summary_file}")
+
+    return summary_text
+
+
 def main():
     """
     Main execution function
     """
-    # Configuration
-    PREPROCESSED_DATA_DIR = "./results_theta/preprocessed_data"
-    OUTPUT_DIR = "./roi_group_results"
-    METHOD = "cluster"  # 'ttest' or 'cluster' (cluster recommended for robust group analysis)
-    MIN_SUBJECTS = 2  # Minimum subjects required per ROI for group analysis
-    N_PERMUTATIONS = 5000
-    PRECLUSTER_P = 0.1  # Liberal threshold for cluster formation (0.05=strict, 0.1=moderate, 0.2=liberal)
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='ROI-Specific Group Analysis for iEEG Data',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        '--band',
+        type=str,
+        choices=['theta', 'alpha'],
+        default='theta',
+        help="Frequency band to analyze: 'theta' (4-8 Hz) or 'alpha' (8-12 Hz). Default: theta"
+    )
+
+    parser.add_argument(
+        '--data-dir',
+        type=str,
+        default=None,
+        help="Directory containing preprocessed data (default: ./results_{band}/preprocessed_data)"
+    )
+
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default=None,
+        help="Directory to save results (default: ./roi_group_results_{band})"
+    )
+
+    parser.add_argument(
+        '--method',
+        type=str,
+        choices=['ttest', 'cluster'],
+        default='cluster',
+        help="Statistical method: 'ttest' or 'cluster' (default: cluster)"
+    )
+
+    parser.add_argument(
+        '--min-subjects',
+        type=int,
+        default=2,
+        help="Minimum subjects required per ROI (default: 2)"
+    )
+
+    parser.add_argument(
+        '--n-permutations',
+        type=int,
+        default=5000,
+        help="Number of permutations for cluster test (default: 5000)"
+    )
+
+    parser.add_argument(
+        '--precluster-p',
+        type=float,
+        default=0.1,
+        help="Precluster p-value threshold (default: 0.1)"
+    )
+
+    args = parser.parse_args()
+
+    # Set default directories based on band if not specified
+    BAND = args.band
+    PREPROCESSED_DATA_DIR = args.data_dir or f"./results_{BAND}/preprocessed_data"
+    OUTPUT_DIR = args.output_dir or f"./roi_group_results_{BAND}"
+    METHOD = args.method
+    MIN_SUBJECTS = args.min_subjects
+    N_PERMUTATIONS = args.n_permutations
+    PRECLUSTER_P = args.precluster_p
 
     print("="*80)
-    print("ROI-SPECIFIC GROUP ANALYSIS")
+    print(f"ROI-SPECIFIC GROUP ANALYSIS ({BAND.upper()} BAND)")
     print("="*80)
     print(f"\nConfiguration:")
+    print(f"  Frequency band: {BAND}")
     print(f"  Preprocessed data: {PREPROCESSED_DATA_DIR}")
     print(f"  Output directory: {OUTPUT_DIR}")
     print(f"  Method: {METHOD}")
@@ -805,7 +1174,7 @@ def main():
     print(f"  Precluster threshold (if cluster): p={PRECLUSTER_P}")
 
     # Initialize analyzer
-    analyzer = ROIGroupAnalyzer(PREPROCESSED_DATA_DIR, OUTPUT_DIR)
+    analyzer = ROIGroupAnalyzer(PREPROCESSED_DATA_DIR, OUTPUT_DIR, band=BAND)
 
     # Load all subjects
     n_subjects = analyzer.load_all_subjects()
@@ -830,6 +1199,9 @@ def main():
     print(f"\n[OK] Analysis complete!")
     print(f"  Total ROIs analyzed: {len(results)}")
     print(f"  Results saved to: {OUTPUT_DIR}")
+
+    # Generate comprehensive summary and interpretation
+    generate_roi_analysis_summary(results, BAND, analyzer.output_dir)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,20 @@
+region,category,hemisphere,n_electrodes,n_subjects,region_short,avg_per_subject
+ctx-lh-inferiorparietal,Inferior Parietal,Left,52,8,inferiorparietal,6.5
+ctx-lh-insula,Insula,Left,6,2,insula,3.0
+ctx-lh-middletemporal,Temporal,Left,98,14,middletemporal,7.0
+ctx-lh-parsopercularis,Inferior Frontal,Left,55,15,parsopercularis,3.6666666666666665
+ctx-lh-parsorbitalis,Inferior Frontal,Left,11,6,parsorbitalis,1.8333333333333333
+ctx-lh-parstriangularis,Inferior Frontal,Left,60,15,parstriangularis,4.0
+ctx-lh-postcentral,Sensorimotor,Left,116,13,postcentral,8.923076923076923
+ctx-lh-precentral,Sensorimotor,Left,107,15,precentral,7.133333333333334
+ctx-lh-superiortemporal,Temporal,Left,123,14,superiortemporal,8.785714285714286
+ctx-lh-supramarginal,Inferior Parietal,Left,70,13,supramarginal,5.384615384615385
+ctx-rh-inferiorparietal,Inferior Parietal,Right,24,3,inferiorparietal,8.0
+ctx-rh-insula,Insula,Right,10,2,insula,5.0
+ctx-rh-middletemporal,Temporal,Right,56,5,middletemporal,11.2
+ctx-rh-parsopercularis,Inferior Frontal,Right,1,1,parsopercularis,1.0
+ctx-rh-parstriangularis,Inferior Frontal,Right,3,2,parstriangularis,1.5
+ctx-rh-postcentral,Sensorimotor,Right,12,3,postcentral,4.0
+ctx-rh-precentral,Sensorimotor,Right,1,1,precentral,1.0
+ctx-rh-superiortemporal,Temporal,Right,23,3,superiortemporal,7.666666666666667
+ctx-rh-supramarginal,Inferior Parietal,Right,29,4,supramarginal,7.25

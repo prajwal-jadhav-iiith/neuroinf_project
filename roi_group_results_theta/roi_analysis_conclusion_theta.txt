@@ -1,0 +1,49 @@
+
+================================================================================
+ROI GROUP ANALYSIS SUMMARY: THETA BAND
+================================================================================
+
+OVERALL RESULTS:
+--------------------------------------------------------------------------------
+• Total ROIs analyzed: 17
+• ROIs with significant effects: 4 (23.5%)
+• ROIs without significant effects: 13
+
+SIGNIFICANT ROIs BY ANATOMICAL REGION:
+--------------------------------------------------------------------------------
+
+Temporal Cortex (2 ROIs):
+  • ctx-lh-superiortemporal (n=14): 4 clusters - Music > Speech
+  • ctx-lh-middletemporal (n=13): 2 clusters - Music > Speech
+
+Other Cortex (2 ROIs):
+  • ctx-lh-precentral (n=15): 1 clusters - Speech > Music
+  • ctx-lh-postcentral (n=13): 1 clusters - Speech > Music
+
+ANATOMICAL INTERPRETATION:
+--------------------------------------------------------------------------------
+
+• TEMPORAL REGIONS (2 ROIs):
+  - Function: Auditory processing, speech perception, music processing
+  - Finding: Differential theta power suggests condition-specific auditory encoding
+  - Theta interpretation: Temporal chunking and segmentation of auditory streams
+
+GROUP-LEVEL CONCLUSION:
+--------------------------------------------------------------------------------
+• 4 ROIs show significant speech vs. music differences in theta band
+• HETEROGENEOUS PATTERN: Both directions represented
+  - Music > Speech: 2 ROIs
+  - Speech > Music: 2 ROIs
+  - Mixed: 0 ROIs
+• Different ROIs show distinct functional specialization
+
+RECOMMENDATIONS:
+--------------------------------------------------------------------------------
+• Examine individual ROI plots in: roi_group_results_theta
+• Check summary CSV for detailed statistics
+• Consider follow-up analyses:
+  - Connectivity analysis between significant ROIs
+  - Single-trial variability in high-effect ROIs
+  - Cross-frequency coupling (if multiple bands analyzed)
+
+================================================================================
