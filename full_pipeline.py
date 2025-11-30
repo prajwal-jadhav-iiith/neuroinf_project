@@ -659,6 +659,7 @@ def permutation_test_cluster_based(speech_power, music_power,
                                     decim_factor=None, target_time_points=None):
     """
     Cluster-based permutation test using MNE's validated implementation
+    (1D Time-Series Version: Averaged across frequencies)
 
     This function wraps mne.stats.permutation_cluster_test to provide
     a standardized, peer-reviewed statistical test (Maris & Oostenveld, 2007).
@@ -680,16 +681,16 @@ def permutation_test_cluster_based(speech_power, music_power,
     --------
     results : dict
         Dictionary with keys:
-        - 'observed_t_maps': Observed t-statistics
-        - 'significant_mask': Boolean mask of significant pixels
+        - 'observed_t_maps': Observed t-statistics (n_channels, n_times)
+        - 'significant_mask': Boolean mask of significant pixels (n_channels, n_times)
         - 'significant_clusters': List of significant cluster info
         - 'cluster_thresholds': Thresholds per channel
-        - 'method': 'cluster-based'
+        - 'method': 'cluster-based (1D)'
     """
     from mne.stats import permutation_cluster_test
 
     print("\n" + "="*70)
-    print("CLUSTER-BASED PERMUTATION TEST (MNE Standard Implementation)")
+    print("CLUSTER-BASED PERMUTATION TEST (1D Time-Series)")
     print("="*70)
 
     # Downsample temporal dimension if requested
@@ -702,17 +703,20 @@ def permutation_test_cluster_based(speech_power, music_power,
                                                 decim_factor=decim_factor,
                                                 target_time_points=target_time_points)
 
-    n_speech_epochs = speech_power.shape[0]
-    n_music_epochs = music_power.shape[0]
-    n_channels = speech_power.shape[1]
-    n_freqs = speech_power.shape[2]
-    n_times = speech_power.shape[3]
+    # Average across frequencies to create 1D time-series
+    print("\nAveraging power across frequency dimension...")
+    speech_power_1d = speech_power.mean(axis=2)  # (n_epochs, n_channels, n_times)
+    music_power_1d = music_power.mean(axis=2)
 
-    print(f"\nData dimensions:")
+    n_speech_epochs = speech_power_1d.shape[0]
+    n_music_epochs = music_power_1d.shape[0]
+    n_channels = speech_power_1d.shape[1]
+    n_times = speech_power_1d.shape[2]
+
+    print(f"\nData dimensions (1D):")
     print(f"  Speech epochs: {n_speech_epochs}")
     print(f"  Music epochs: {n_music_epochs}")
     print(f"  Channels: {n_channels}")
-    print(f"  Frequencies: {n_freqs}")
     print(f"  Time points: {n_times}")
     print(f"  Permutations: {n_permutations}")
     print(f"  Precluster threshold: p < {precluster_p}")
@@ -738,31 +742,25 @@ def permutation_test_cluster_based(speech_power, music_power,
 
     print(f"  t-threshold: {threshold:.3f} (df={df})")
 
-    # Initialize result storage
-    observed_t_maps = np.zeros((n_channels, n_freqs, n_times))
-    sig_mask = np.zeros((n_channels, n_freqs, n_times), dtype=bool)
+    # Initialize result storage (1D arrays)
+    observed_t_maps = np.zeros((n_channels, n_times))
+    sig_mask = np.zeros((n_channels, n_times), dtype=bool)
     all_sig_clusters = []
     cluster_thresholds = np.zeros(n_channels)
 
     print("\nRunning cluster-based permutation test per channel...")
     start_time = time.time()
 
-    # Process each channel independently (iEEG channels are spatially independent)
+    # Process each channel independently
     for ch_idx in range(n_channels):
         if (ch_idx + 1) % max(1, n_channels // 10) == 0 or ch_idx == 0:
             print(f"  Channel {ch_idx + 1}/{n_channels}...")
 
-        # Prepare data for this channel: (n_epochs, n_freqs, n_times)
-        speech_ch = speech_power[:, ch_idx, :, :]  # (n_speech, n_freqs, n_times)
-        music_ch = music_power[:, ch_idx, :, :]    # (n_music, n_freqs, n_times)
-
-        # Compute difference for each epoch: speech - music
-        # For permutation_cluster_test, we need to test if the difference is != 0
-        # We'll use a one-sample test on the difference scores
-        differences = speech_ch - music_ch.mean(axis=0, keepdims=True)
+        # Prepare data for this channel: (n_epochs, n_times)
+        speech_ch = speech_power_1d[:, ch_idx, :]  # (n_speech, n_times)
+        music_ch = music_power_1d[:, ch_idx, :]    # (n_music, n_times)
 
         # Create the data array for MNE (one sample per observation)
-        # Shape: (n_observations, n_freqs, n_times)
         X = [speech_ch, music_ch]  # List of two arrays for independent samples
 
         try:
@@ -773,8 +771,8 @@ def permutation_test_cluster_based(speech_power, music_power,
                 threshold=threshold,
                 tail=tail_mne,
                 stat_fun=lambda x, y: stats.ttest_ind(x, y, equal_var=False)[0],  # Welch's t-test
-                adjacency=None,  # No spatial adjacency for 2D time-frequency
-                n_jobs=-1,  # Use all available CPU cores for parallel processing (8-12x speedup)
+                adjacency=None,  # No spatial adjacency for 1D time-series
+                n_jobs=-1,
                 seed=42,
                 verbose=False
             )
@@ -786,22 +784,45 @@ def permutation_test_cluster_based(speech_power, music_power,
             sig_clusters_idx = np.where(cluster_p_values < 0.05)[0]
 
             if len(sig_clusters_idx) > 0:
-                # Get the largest cluster statistic as threshold
-                cluster_stats = [np.sum(np.abs(T_obs[clusters[i]])) for i in range(len(clusters))]
+                # Calculate cluster stats for reporting
+                cluster_stats = []
+                for i in range(len(clusters)):
+                    c = clusters[i]
+                    # Handle tuple wrapping for 1D
+                    if isinstance(c, tuple):
+                        c = c[0]
+                    
+                    # Handle slices
+                    if isinstance(c, slice):
+                        indices = np.arange(c.start, c.stop, c.step or 1)
+                    else:
+                        indices = c
+                        
+                    cluster_stats.append(np.sum(np.abs(T_obs[indices])))
+                
                 cluster_thresholds[ch_idx] = np.max(cluster_stats)
 
                 # Mark significant pixels and store cluster info
                 for cluster_idx in sig_clusters_idx:
                     cluster_mask = clusters[cluster_idx]
-                    sig_mask[ch_idx][cluster_mask] = True
+                    
+                    # Handle tuple wrapping for 1D
+                    if isinstance(cluster_mask, tuple):
+                        cluster_mask = cluster_mask[0]
 
-                    # Get cluster coordinates
-                    coords = np.where(cluster_mask)
-                    cluster_stat = np.sum(np.abs(T_obs[cluster_mask]))
+                    # Handle slices/arrays to update mask
+                    if isinstance(cluster_mask, slice):
+                        indices = np.arange(cluster_mask.start, cluster_mask.stop, cluster_mask.step or 1)
+                        sig_mask[ch_idx][cluster_mask] = True
+                    else:
+                        indices = cluster_mask
+                        sig_mask[ch_idx][cluster_mask] = True
+
+                    cluster_stat = np.sum(np.abs(T_obs[indices]))
 
                     all_sig_clusters.append({
                         'channel': ch_idx,
-                        'cluster_coords': coords,
+                        'cluster_indices': indices,  # Store 1D indices
                         'statistic': cluster_stat,
                         'p_value': cluster_p_values[cluster_idx]
                     })
@@ -826,7 +847,7 @@ def permutation_test_cluster_based(speech_power, music_power,
     print("RESULTS SUMMARY")
     print(f"{'='*70}")
     print(f"Total significant clusters: {len(all_sig_clusters)}")
-    print(f"Total significant pixels: {n_sig_pixels} / {total_pixels}")
+    print(f"Total significant timepoints: {n_sig_pixels} / {total_pixels}")
     print(f"Percentage: {100 * n_sig_pixels / total_pixels:.2f}%")
 
     print("\nPer-channel summary:")
@@ -834,19 +855,19 @@ def permutation_test_cluster_based(speech_power, music_power,
         n_clust_ch = sum(1 for c in all_sig_clusters if c['channel'] == ch)
         n_sig_ch = np.sum(sig_mask[ch])
         if n_clust_ch > 0 or n_sig_ch > 0:
-            print(f"  Channel {ch}: {n_clust_ch} clusters, {n_sig_ch} pixels")
+            print(f"  Channel {ch}: {n_clust_ch} clusters, {n_sig_ch} timepoints")
 
     return {
         'observed_t_maps': observed_t_maps,
         'significant_mask': sig_mask,
         'significant_clusters': all_sig_clusters,
         'cluster_thresholds': cluster_thresholds,
-        'null_distributions': None,  # MNE handles this internally
+        'null_distributions': None,
         'precluster_threshold_upper': precluster_thresh_upper,
         'precluster_threshold_lower': precluster_thresh_lower,
         'n_significant_pixels': n_sig_pixels,
         'n_significant_clusters': len(all_sig_clusters),
-        'method': 'cluster-based (MNE standard)'
+        'method': 'cluster-based (1D)'
     }
 
 
@@ -1392,7 +1413,7 @@ def create_preprocessing_qc_plots(raw_after_ica, raw_after_notch, raw_after_band
 def plot_tf_results(results, channel_names, freqs, times, subject_id,
                     save_dir='.', show_plots=False, band_config=None):
     """
-    Visualize time-frequency results
+    Visualize 1D time-series statistical results
 
     Parameters:
     -----------
@@ -1401,7 +1422,7 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
     channel_names : list
         Names of channels
     freqs : np.ndarray
-        Frequencies
+        Frequencies (unused for 1D plot, kept for compatibility)
     times : np.ndarray
         Time points
     subject_id : str
@@ -1411,7 +1432,7 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
     show_plots : bool
         Whether to display plots
     band_config : dict or None
-        Band configuration dict from get_band_config()
+        Band configuration dict
     """
     # Use default theta band if no config provided
     if band_config is None:
@@ -1421,43 +1442,63 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
 
     n_channels = len(channel_names)
 
-    # Summary figure with all channels
-    fig, axes = plt.subplots(n_channels, 2, figsize=(14, 4*n_channels))
-    if n_channels == 1:
-        axes = axes.reshape(1, -1)
+    # Determine grid size
+    n_cols = 2
+    n_rows = int(np.ceil(n_channels / n_cols))
 
-    fig.suptitle(f'{subject_id} - All Channels - {results["method"]} ({band_config["name"].title()} Band {band_config["range_str"]})',
-                fontsize=14, fontweight='bold')
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 3*n_rows))
+    axes = axes.flatten()
+
+    fig.suptitle(f'{subject_id} - {results["method"]} Results ({band_config["name"].title()} Band)',
+                fontsize=16, fontweight='bold', y=0.995)
 
     for ch_idx in range(n_channels):
-        # Observed
-        ax = axes[ch_idx, 0]
-        vmax = min(5, np.abs(results['observed_t_maps'][ch_idx]).max())
-        im = ax.pcolormesh(times, freqs, results['observed_t_maps'][ch_idx],
-                          cmap='RdBu_r', vmin=-vmax, vmax=vmax, shading='auto')
-        ax.set_ylabel(f'{channel_names[ch_idx]}\nFreq (Hz)')
-        if ch_idx == n_channels - 1:
-            ax.set_xlabel('Time (s)')
-        ax.set_yscale('log')
-        if ch_idx == 0:
-            ax.set_title('Observed T-Statistics')
+        ax = axes[ch_idx]
+        
+        # Get t-values
+        t_values = results['observed_t_maps'][ch_idx]
+        sig_mask = results['significant_mask'][ch_idx]
+        
+        # Plot t-values
+        ax.plot(times, t_values, 'k-', linewidth=1.5, label='T-statistic')
+        ax.axhline(0, color='gray', linestyle='--', linewidth=0.5)
+        
+        # Highlight significant clusters
+        if np.any(sig_mask):
+            # Find contiguous segments for cleaner filling
+            # (sig_mask is boolean array)
+            
+            # Trick to find starts and ends of True regions
+            is_sig = np.concatenate(([0], sig_mask, [0]))
+            absdiff = np.abs(np.diff(is_sig))
+            ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
+            
+            for start, end in ranges:
+                ax.axvspan(times[start], times[end-1], color='green', alpha=0.3, 
+                          label='Significant' if start == ranges[0][0] else None)
+                
+        # Add threshold lines if available
+        if results.get('precluster_threshold_upper') is not None:
+            ax.axhline(results['precluster_threshold_upper'], color='r', linestyle=':', alpha=0.5)
+        if results.get('precluster_threshold_lower') is not None:
+            ax.axhline(results['precluster_threshold_lower'], color='r', linestyle=':', alpha=0.5)
 
-        # Significant
-        ax = axes[ch_idx, 1]
-        masked_t_map = results['observed_t_maps'][ch_idx].copy()
-        masked_t_map[~results['significant_mask'][ch_idx]] = 0
-        im = ax.pcolormesh(times, freqs, masked_t_map,
-                          cmap='RdBu_r', vmin=-vmax, vmax=vmax, shading='auto')
-        if ch_idx == n_channels - 1:
-            ax.set_xlabel('Time (s)')
-        ax.set_yscale('log')
-        if ch_idx == 0:
-            ax.set_title('Significant Pixels (corrected)')
+        ax.set_title(f'{channel_names[ch_idx]}', fontsize=12, fontweight='bold')
+        
+        if ch_idx >= n_channels - n_cols:
+            ax.set_xlabel('Time (s)', fontsize=10)
+        if ch_idx % n_cols == 0:
+            ax.set_ylabel('T-statistic', fontsize=10)
+            
+        ax.grid(True, alpha=0.3)
+        
+        # Simple legend for first plot only to avoid clutter
+        if ch_idx == 0 and np.any(sig_mask):
+            ax.legend(loc='best', fontsize=8)
 
-        n_sig = np.sum(results['significant_mask'][ch_idx])
-        ax.text(0.02, 0.98, f'n={n_sig}', transform=ax.transAxes,
-               fontsize=10, verticalalignment='top',
-               bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    # Hide empty subplots
+    for i in range(n_channels, len(axes)):
+        axes[i].axis('off')
 
     plt.tight_layout()
     save_path = os.path.join(save_dir,
@@ -1474,14 +1515,14 @@ def plot_tf_results(results, channel_names, freqs, times, subject_id,
 def generate_cluster_report(results, channel_names, freqs, times,
                            subject_id, save_path=None, band_config=None):
     """
-    Generate detailed text report of significant clusters
+    Generate detailed text report of significant clusters (1D Version)
 
     Parameters:
     -----------
     results : dict
         Results from cluster-based permutation test
     channel_names : list
-    freqs : np.ndarray
+    freqs : np.ndarray (unused in report, kept for signature)
     times : np.ndarray
     subject_id : str
     save_path : str or None
@@ -1497,7 +1538,7 @@ def generate_cluster_report(results, channel_names, freqs, times,
 
     # Header
     report_lines.append("="*80)
-    report_lines.append(f"CLUSTER-BASED PERMUTATION TEST RESULTS")
+    report_lines.append(f"CLUSTER-BASED PERMUTATION TEST RESULTS (1D Time-Series)")
     report_lines.append(f"Subject: {subject_id}")
     report_lines.append("="*80)
     report_lines.append("")
@@ -1507,10 +1548,14 @@ def generate_cluster_report(results, channel_names, freqs, times,
     report_lines.append("-"*80)
     report_lines.append(f"Method: {results['method']}")
     report_lines.append(f"Total channels analyzed: {len(channel_names)}")
-    report_lines.append(f"Channels with significant clusters: {len(set(c['channel'] for c in results['significant_clusters']))}")
+    
+    # Handle potential missing key if 2D results passed (fallback)
+    sig_clusters = results.get('significant_clusters', [])
+    
+    report_lines.append(f"Channels with significant clusters: {len(set(c['channel'] for c in sig_clusters))}")
     report_lines.append(f"Total significant clusters: {results['n_significant_clusters']}")
-    report_lines.append(f"Total significant pixels: {results['n_significant_pixels']}")
-    report_lines.append(f"Percentage of all pixels: {100*results['n_significant_pixels']/results['significant_mask'].size:.2f}%")
+    report_lines.append(f"Total significant timepoints: {results['n_significant_pixels']}")
+    report_lines.append(f"Percentage of all timepoints: {100*results['n_significant_pixels']/results['significant_mask'].size:.2f}%")
     report_lines.append("")
 
     # Check direction of effects
@@ -1523,8 +1568,8 @@ def generate_cluster_report(results, channel_names, freqs, times,
 
     report_lines.append("EFFECT DIRECTION")
     report_lines.append("-"*80)
-    report_lines.append(f"Significant pixels with positive t (Speech > Music): {n_positive}")
-    report_lines.append(f"Significant pixels with negative t (Music > Speech): {n_negative}")
+    report_lines.append(f"Significant timepoints with positive t (Speech > Music): {n_positive}")
+    report_lines.append(f"Significant timepoints with negative t (Music > Speech): {n_negative}")
     report_lines.append("")
 
     if n_negative > n_positive:
@@ -1541,10 +1586,10 @@ def generate_cluster_report(results, channel_names, freqs, times,
     report_lines.append("")
 
     # Group clusters by channel
-    channels_with_clusters = sorted(set(c['channel'] for c in results['significant_clusters']))
+    channels_with_clusters = sorted(set(c['channel'] for c in sig_clusters))
 
     for ch_idx in channels_with_clusters:
-        ch_clusters = [c for c in results['significant_clusters'] if c['channel'] == ch_idx]
+        ch_clusters = [c for c in sig_clusters if c['channel'] == ch_idx]
 
         report_lines.append(f"Channel {ch_idx}: {channel_names[ch_idx]}")
         report_lines.append("-"*80)
@@ -1554,18 +1599,23 @@ def generate_cluster_report(results, channel_names, freqs, times,
 
         # Detail each cluster
         for cluster_num, cluster_info in enumerate(ch_clusters, 1):
-            coords = cluster_info['cluster_coords']
-            freq_indices = coords[0]
-            time_indices = coords[1]
+            # 1D: indices are direct time indices
+            if 'cluster_indices' in cluster_info:
+                time_indices = cluster_info['cluster_indices']
+            else:
+                # Fallback for 2D if needed (though we shouldn't be here)
+                time_indices = cluster_info['cluster_coords'][0] # Assuming flattened or similar? No, 2D coords are tuple
+                # Safe fallback not strictly needed if we control the input
+                pass
 
-            # Get frequency and time ranges
-            freq_min = freqs[freq_indices.min()]
-            freq_max = freqs[freq_indices.max()]
+            # Get time ranges
             time_min = times[time_indices.min()]
             time_max = times[time_indices.max()]
+            duration = time_max - time_min
 
             # Get t-values in this cluster
-            cluster_t_values = observed_t[ch_idx][coords]
+            # observed_t[ch_idx] is 1D array (n_times)
+            cluster_t_values = observed_t[ch_idx][time_indices]
             mean_t = np.mean(cluster_t_values)
             max_t = cluster_t_values[np.argmax(np.abs(cluster_t_values))]
 
@@ -1576,13 +1626,14 @@ def generate_cluster_report(results, channel_names, freqs, times,
                 direction = "Music > Speech"
 
             report_lines.append(f"  Cluster {cluster_num}:")
-            report_lines.append(f"    Size: {len(freq_indices)} pixels")
-            report_lines.append(f"    Cluster mass: {cluster_info['statistic']:.1f}")
-            report_lines.append(f"    Frequency range: {freq_min:.2f} - {freq_max:.2f} Hz")
+            report_lines.append(f"    Size: {len(time_indices)} timepoints")
+            report_lines.append(f"    Duration: {duration:.3f} seconds")
             report_lines.append(f"    Time range: {time_min:.2f} - {time_max:.2f} seconds")
+            report_lines.append(f"    Cluster mass: {cluster_info['statistic']:.1f}")
             report_lines.append(f"    Mean t-statistic: {mean_t:.3f}")
             report_lines.append(f"    Peak t-statistic: {max_t:.3f}")
             report_lines.append(f"    Effect direction: {direction}")
+            report_lines.append(f"    p-value: {cluster_info['p_value']:.4f}")
             report_lines.append("")
 
         report_lines.append("")
@@ -1605,7 +1656,7 @@ def generate_cluster_report(results, channel_names, freqs, times,
     report_lines.append(f"Precluster t-value: {results['precluster_threshold_upper']:.3f}")
     report_lines.append(f"Cluster statistic type: mass (sum of absolute t-values)")
     report_lines.append(f"Number of permutations: 5000")
-    report_lines.append(f"Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)")
+    report_lines.append(f"Correction method: Cluster-based permutation (1D)")
     report_lines.append("")
 
     # Create the full report text
@@ -1625,7 +1676,7 @@ def generate_cluster_report(results, channel_names, freqs, times,
 
 def create_summary_table(results, channel_names):
     """
-    Create a pandas DataFrame summarizing cluster results
+    Create a pandas DataFrame summarizing cluster results (1D Version)
 
     Parameters:
     -----------
@@ -1639,32 +1690,40 @@ def create_summary_table(results, channel_names):
     """
     summary_data = []
 
+    # Handle empty results
+    if 'significant_clusters' not in results:
+        return pd.DataFrame()
+
     for cluster_info in results['significant_clusters']:
         ch_idx = cluster_info['channel']
-        coords = cluster_info['cluster_coords']
+        
+        # Handle 1D indices
+        if 'cluster_indices' in cluster_info:
+            indices = cluster_info['cluster_indices']
+            
+            # Get t-values
+            cluster_t_values = results['observed_t_maps'][ch_idx][indices]
+            mean_t = np.mean(cluster_t_values)
 
-        # Get t-values
-        cluster_t_values = results['observed_t_maps'][ch_idx][coords]
-        mean_t = np.mean(cluster_t_values)
+            # Effect direction
+            if mean_t > 0:
+                direction = "Speech > Music"
+                effect_magnitude = mean_t
+            else:
+                direction = "Music > Speech"
+                effect_magnitude = abs(mean_t)
 
-        # Effect direction
-        if mean_t > 0:
-            direction = "Speech > Music"
-            effect_magnitude = mean_t
-        else:
-            direction = "Music > Speech"
-            effect_magnitude = abs(mean_t)
-
-        summary_data.append({
-            'Channel': channel_names[ch_idx],
-            'Channel_Index': ch_idx,
-            'Cluster_Size': len(coords[0]),
-            'Cluster_Mass': cluster_info['statistic'],
-            'Mean_T': mean_t,
-            'Peak_T': cluster_t_values[np.argmax(np.abs(cluster_t_values))],
-            'Effect_Direction': direction,
-            'Effect_Magnitude': effect_magnitude
-        })
+            summary_data.append({
+                'Channel': channel_names[ch_idx],
+                'Channel_Index': ch_idx,
+                'Cluster_Size_Timepoints': len(indices),
+                'Cluster_Mass': cluster_info['statistic'],
+                'Mean_T': mean_t,
+                'Peak_T': cluster_t_values[np.argmax(np.abs(cluster_t_values))],
+                'Effect_Direction': direction,
+                'Effect_Magnitude': effect_magnitude,
+                'P_Value': cluster_info['p_value']
+            })
 
     df = pd.DataFrame(summary_data)
 
@@ -1723,7 +1782,7 @@ def generate_analysis_conclusion(cluster_results, summary_df, subject_id, band_c
         conclusion_lines.append(f"  similar responses to speech and music stimuli in this subject")
     else:
         conclusion_lines.append(f"• Found {n_total_clusters} significant clusters across {n_sig_channels}/{n_total_channels} channels")
-        conclusion_lines.append(f"• {percent_sig:.2f}% of time-frequency points show significant differences")
+        conclusion_lines.append(f"• {percent_sig:.2f}% of timepoints show significant differences")
 
         # Effect direction analysis
         if len(summary_df) > 0:
@@ -1759,7 +1818,8 @@ def generate_analysis_conclusion(cluster_results, summary_df, subject_id, band_c
             top_n = min(3, len(summary_df))
             for idx, row in summary_df.head(top_n).iterrows():
                 conclusion_lines.append(f"{idx+1}. {row['Channel']}: {row['Effect_Direction']}")
-                conclusion_lines.append(f"   Mean t-statistic: {row['Mean_T']:.2f}, Cluster size: {row['Cluster_Size']} pixels")
+                size_val = row.get('Cluster_Size_Timepoints', row.get('Cluster_Size', 'N/A'))
+                conclusion_lines.append(f"   Mean t-statistic: {row['Mean_T']:.2f}, Cluster size: {size_val} timepoints")
 
     conclusion_lines.append("")
     conclusion_lines.append("INTERPRETATION:")

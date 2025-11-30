@@ -1,0 +1,43 @@
+
+================================================================================
+ANALYSIS CONCLUSION: sub-01 - THETA BAND (4-8 Hz)
+================================================================================
+
+OVERALL FINDINGS:
+--------------------------------------------------------------------------------
+• Found 3 significant clusters across 3/15 channels
+• 0.19% of timepoints show significant differences
+• Effect directions:
+  - Speech > Music: 1 clusters
+  - Music > Speech: 2 clusters
+
+PRIMARY FINDING:
+• Music stimuli elicit stronger theta power than speech
+• This suggests enhanced neural oscillatory activity in response to music
+
+STRONGEST EFFECTS (Top 3 Channels):
+--------------------------------------------------------------------------------
+1. AR7: Music > Speech
+   Mean t-statistic: -5.53, Cluster size: 11 timepoints
+2. ITR9: Speech > Music
+   Mean t-statistic: 3.14, Cluster size: 19 timepoints
+3. AHL8: Music > Speech
+   Mean t-statistic: -2.89, Cluster size: 24 timepoints
+
+INTERPRETATION:
+--------------------------------------------------------------------------------
+• Theta oscillations (4-8 Hz) are associated with:
+  - Working memory and cognitive control
+  - Temporal encoding of speech segments
+  - Auditory processing and attention
+• The observed differences suggest condition-specific theta modulation
+  in language/auditory processing regions (perisylvian cortex)
+
+NEXT STEPS:
+--------------------------------------------------------------------------------
+• Review detailed cluster report: sub-01_cluster_report.txt
+• Examine visualizations: sub-01_summary_cluster-based.png
+• Compare with other subjects for group-level patterns
+• Use roi_group_analysis.py for ROI-specific group statistics
+
+================================================================================

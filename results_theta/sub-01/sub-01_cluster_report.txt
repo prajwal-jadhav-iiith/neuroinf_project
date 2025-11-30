@@ -1,95 +1,89 @@
 ================================================================================
-CLUSTER-BASED PERMUTATION TEST RESULTS
+CLUSTER-BASED PERMUTATION TEST RESULTS (1D Time-Series)
 Subject: sub-01
 ================================================================================
 
 OVERALL SUMMARY
 --------------------------------------------------------------------------------
-Method: cluster-based (MNE standard)
+Method: cluster-based (1D)
 Total channels analyzed: 15
 Channels with significant clusters: 3
-Total significant clusters: 4
-Total significant pixels: 691
-Percentage of all pixels: 0.27%
+Total significant clusters: 3
+Total significant timepoints: 54
+Percentage of all timepoints: 0.19%
 
 EFFECT DIRECTION
 --------------------------------------------------------------------------------
-Significant pixels with positive t (Speech > Music): 0
-Significant pixels with negative t (Music > Speech): 691
+Significant timepoints with positive t (Speech > Music): 19
+Significant timepoints with negative t (Music > Speech): 35
 
 INTERPRETATION: Music shows higher theta power than Speech
 
 DETAILED CLUSTER INFORMATION BY CHANNEL
 ================================================================================
 
-Channel 0: AR6
---------------------------------------------------------------------------------
-Number of significant clusters: 2
-Cluster threshold for this channel: 582.9
-
-  Cluster 1:
-    Size: 310 pixels
-    Cluster mass: 426.6
-    Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.42 seconds
-    Mean t-statistic: 0.369
-    Peak t-statistic: 2.454
-    Effect direction: Speech > Music
-
-  Cluster 2:
-    Size: 391 pixels
-    Cluster mass: 582.9
-    Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 3.31 seconds
-    Mean t-statistic: 0.015
-    Peak t-statistic: 2.454
-    Effect direction: Speech > Music
-
-
 Channel 1: AR7
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 481.1
+Cluster threshold for this channel: 60.8
 
   Cluster 1:
-    Size: 336 pixels
-    Cluster mass: 481.1
-    Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.61 seconds
-    Mean t-statistic: 0.001
-    Peak t-statistic: 3.071
-    Effect direction: Speech > Music
+    Size: 11 timepoints
+    Duration: 0.156 seconds
+    Time range: 18.52 - 18.67 seconds
+    Cluster mass: 60.8
+    Mean t-statistic: -5.532
+    Peak t-statistic: -10.790
+    Effect direction: Music > Speech
+    p-value: 0.0370
 
 
-Channel 7: PHR8
+Channel 11: ITR9
 --------------------------------------------------------------------------------
 Number of significant clusters: 1
-Cluster threshold for this channel: 414.8
+Cluster threshold for this channel: 59.6
 
   Cluster 1:
-    Size: 303 pixels
-    Cluster mass: 414.8
-    Frequency range: 4.00 - 4.50 Hz
-    Time range: 0.00 - 2.39 seconds
-    Mean t-statistic: 0.220
-    Peak t-statistic: -3.041
+    Size: 19 timepoints
+    Duration: 0.281 seconds
+    Time range: 0.48 - 0.77 seconds
+    Cluster mass: 59.6
+    Mean t-statistic: 3.136
+    Peak t-statistic: 3.788
     Effect direction: Speech > Music
+    p-value: 0.0375
+
+
+Channel 14: AHL8
+--------------------------------------------------------------------------------
+Number of significant clusters: 1
+Cluster threshold for this channel: 69.4
+
+  Cluster 1:
+    Size: 24 timepoints
+    Duration: 0.359 seconds
+    Time range: 24.58 - 24.94 seconds
+    Cluster mass: 69.4
+    Mean t-statistic: -2.892
+    Peak t-statistic: -3.561
+    Effect direction: Music > Speech
+    p-value: 0.0130
 
 
 CHANNELS WITHOUT SIGNIFICANT CLUSTERS
 --------------------------------------------------------------------------------
+  Channel 0: AR6
   Channel 2: AR9
   Channel 3: AHR7
   Channel 4: AHR8
   Channel 5: AHR9
   Channel 6: PHR7
+  Channel 7: PHR8
   Channel 8: ITR6
   Channel 9: ITR7
   Channel 10: ITR8
-  Channel 11: ITR9
   Channel 12: ITR10
   Channel 13: AHL7
-  Channel 14: AHL8
 
 STATISTICAL PARAMETERS
 ================================================================================
@@ -97,4 +91,4 @@ Precluster threshold (uncorrected): p < 0.05
 Precluster t-value: 2.201
 Cluster statistic type: mass (sum of absolute t-values)
 Number of permutations: 5000
-Correction method: Cluster-based permutation (Maris & Oostenveld, 2007)
+Correction method: Cluster-based permutation (1D)

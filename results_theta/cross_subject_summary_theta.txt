@@ -1,0 +1,63 @@
+
+================================================================================
+CROSS-SUBJECT PATTERN ANALYSIS: THETA BAND (4-8 Hz)
+================================================================================
+
+GROUP-LEVEL STATISTICS:
+--------------------------------------------------------------------------------
+• Total subjects analyzed: 19
+• Subjects with significant effects: 18 (94.7%)
+• Subjects without significant effects: 1
+
+• Total significant clusters across all subjects: 286
+• Mean clusters per subject: 15.9 (median: 10)
+• Mean effect magnitude: 0.40
+
+EFFECT DIRECTION ACROSS ALL SUBJECTS:
+--------------------------------------------------------------------------------
+• Speech > Music: 71 clusters (24.8%)
+• Music > Speech: 215 clusters (75.2%)
+
+PREDOMINANT PATTERN PER SUBJECT:
+--------------------------------------------------------------------------------
+• Subjects with Music > Speech pattern: 15/18
+• Subjects with Speech > Music pattern: 2/18
+• Subjects with mixed effects: 1/18
+
+GROUP-LEVEL CONCLUSION:
+--------------------------------------------------------------------------------
+• CONSISTENT PATTERN: Majority of subjects (15/18) show
+  stronger theta power for MUSIC than speech
+• This suggests music stimuli consistently elicit enhanced neural oscillatory
+  activity in perisylvian language/auditory regions across the group
+
+PER-SUBJECT BREAKDOWN:
+--------------------------------------------------------------------------------
+• sub-01: 4 clusters (3 channels) - Speech > Music
+• sub-02: 7 clusters (6 channels) - Music > Speech
+• sub-03: 47 clusters (25 channels) - Music > Speech
+• sub-05: 28 clusters (19 channels) - Music > Speech
+• sub-06: 18 clusters (13 channels) - Speech > Music
+• sub-10: 8 clusters (5 channels) - Music > Speech
+• sub-13: 5 clusters (5 channels) - Music > Speech
+• sub-14: 11 clusters (10 channels) - Music > Speech
+• sub-16: 11 clusters (10 channels) - Music > Speech
+• sub-17: 8 clusters (7 channels) - Music > Speech
+• sub-18: 11 clusters (11 channels) - Music > Speech
+• sub-19: 23 clusters (14 channels) - Music > Speech
+• sub-20: 61 clusters (21 channels) - Music > Speech
+• sub-21: 9 clusters (5 channels) - Music > Speech
+• sub-22: 18 clusters (10 channels) - Music > Speech
+• sub-23: 4 clusters (4 channels) - Mixed
+• sub-24: 9 clusters (8 channels) - Music > Speech
+• sub-25: 4 clusters (4 channels) - Music > Speech
+
+NEXT STEPS FOR GROUP ANALYSIS:
+--------------------------------------------------------------------------------
+• Use roi_group_analysis.py to perform ROI-specific statistical tests
+  python roi_group_analysis.py --band theta
+• This will aggregate data across subjects within anatomical ROIs
+• ROI-based analysis provides formal group-level statistics with correction
+  for multiple comparisons across time-frequency space
+
+================================================================================
